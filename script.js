@@ -3,6 +3,7 @@ import {
   getFirestore, collection, doc, addDoc, setDoc, getDoc, updateDoc, deleteDoc,
   onSnapshot, query, where, orderBy, getDocs, limit, serverTimestamp, arrayUnion, arrayRemove, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+import { getStorage, ref as sRef, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
   signOut, onAuthStateChanged, updateProfile, updatePassword, GoogleAuthProvider, signInWithPopup,
@@ -22,6 +23,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 let state = {
   user: null, workspaceId: null, workspaceName: null, role: null, workerName: null,
@@ -172,6 +174,8 @@ function showWorkspaceView() {
   
   $('mentorPanel').classList.toggle('hidden', !isMentor);
   $('mentorTaskCreator').classList.toggle('hidden', !isMentor);
+  $('announceCreator').classList.toggle('hidden', !isMentor);
+  renderAnnouncements();
   
   const dailyGoalSection = $('dailyGoalSection');
   if (dailyGoalSection) dailyGoalSection.classList.toggle('hidden', isMentor);
@@ -181,20 +185,12 @@ function showWorkspaceView() {
 }
 
 function switchWorkspaceTab(tabName) {
-  const taskBtn = $('tabTaskView');
-  const divBtn = $('tabDivisionView');
-  if (tabName === 'task') {
-    $('mainTaskContainer').classList.remove('hidden');
-    $('divisionManagementPanel').classList.add('hidden');
-    if (taskBtn) taskBtn.classList.add('active');
-    if (divBtn) divBtn.classList.remove('active');
-  } else {
-    $('mainTaskContainer').classList.add('hidden');
-    $('divisionManagementPanel').classList.remove('hidden');
-    if (taskBtn) taskBtn.classList.remove('active');
-    if (divBtn) divBtn.classList.add('active');
-    renderDivisionManagement();
-  }
+  Object.entries(WS_TABS).forEach(([k, [panel, btn]]) => {
+    $(panel)?.classList.toggle('hidden', k !== tabName);
+    $(btn)?.classList.toggle('active', k === tabName);
+  });
+  if (tabName === 'division') renderDivisionManagement();
+  if (tabName === 'calendar') renderCalendar();
 }
 
 function toggleAuthMode() {
@@ -281,14 +277,7 @@ async function loadUserWorkspaces() {
     }));
     dashboardWorkspaces = workspaces.filter(Boolean);
     
-    dashboardNotifications = [];
-    dashboardWorkspaces.forEach(ws => (ws.tasks || []).forEach(task => {
-      const relevant = ws.role === 'mentor' || task.assignee === ws.workerName;
-      if (!relevant) return;
-      if (needsAction(task, ws.role, ws.workerName)) dashboardNotifications.push({ ...task, workspaceId: ws.id, workspaceName: ws.name, kind: 'action', role: ws.role });
-      if (task.status === 'done') dashboardNotifications.push({ ...task, workspaceId: ws.id, workspaceName: ws.name, kind: 'done', role: ws.role });
-    }));
-    dashboardNotifications.sort((a, b) => (a.kind === b.kind ? String(b.endDate || '').localeCompare(String(a.endDate || '')) : a.kind === 'action' ? -1 : 1));
+    syncDeadlineNotifications();
 
     renderWorkspaceList(dashboardWorkspaces);
     renderDashboardNotifications();
@@ -296,27 +285,6 @@ async function loadUserWorkspaces() {
     console.error(err);
     if (list) list.innerHTML = `<p class="empty-hint">Gagal memuat: ${escapeHtml(err.message)}</p>`;
   }
-}
-
-function renderDashboardNotifications() {
-  const list = $('dashboardNotificationsList');
-  if (!list) return;
-
-  if (!dashboardNotifications || dashboardNotifications.length === 0) {
-    list.innerHTML = '<p class="empty-hint">Belum ada notifikasi. Aktivitas tugas akan muncul di sini.</p>';
-    return;
-  }
-
-  list.innerHTML = dashboardNotifications.map(item => `
-    <article class="dashboard-notification-item">
-      <span class="notification-status-dot ${item.kind === 'done' ? 'is-done' : 'is-action'}"></span>
-      <div class="dashboard-notification-copy">
-        <strong>${escapeHtml(item.title || 'Tugas tanpa judul')}</strong>
-        <p>${escapeHtml(item.workspaceName)} · ${item.kind === 'done' ? 'Tugas selesai' : (item.role === 'mentor' ? 'Menunggu penilaian' : 'Perlu tindakan')}</p>
-      </div>
-      <span class="notification-kind ${item.kind}">${item.kind === 'done' ? 'Selesai' : 'Perlu tindakan'}</span>
-    </article>
-  `).join('');
 }
 
 async function handleCreateWorkspace(e) {
@@ -384,12 +352,13 @@ async function handleJoinWorkspace(e) {
       batch.set(myMemberRef, { uid, email: state.user.email, name: myName, role: 'worker', division: 'Umum', joinedAt: serverTimestamp() });
       batch.set(doc(db, 'users', uid), { workspaceIds: arrayUnion(wsDoc.id) }, { merge: true });
       await batch.commit();
-      state.role = 'worker';
+      state.role = 'worker'; justJoined = true;
       state.workerName = myName;
     }
     
     state.workspaceId = wsDoc.id;
     state.workspaceName = wsData.name;
+    if (justJoined) { justJoined = false; logActivity('join', `${state.workerName} bergabung ke ruang kerja`); }
     $('joinWorkspaceModal').classList.add('hidden');
     $('joinWorkspaceForm').reset();
     showWorkspaceView();
@@ -422,6 +391,7 @@ function backToDashboard() {
   unsubscribers.forEach(u => u());
   unsubscribers = [];
   state.workspaceId = null; state.workspaceName = null; state.role = null;
+  pendingTaskId = null; activities = []; announcements = [];
   state.members = []; state.tasks = []; state.divisions = [];
   showDashboardView();
 }
@@ -451,8 +421,19 @@ function subscribeToWorkspace() {
 
   unsubscribers.push(onSnapshot(query(collection(db, 'workspaces', state.workspaceId, 'tasks'), orderBy('createdAt', 'desc')), (snap) => {
     state.tasks = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    afterTasksUpdate();
     renderTasks();
   }));
+
+  unsubscribers.push(onSnapshot(query(collection(db, 'workspaces', state.workspaceId, 'activities'), orderBy('at', 'desc'), limit(100)), (snap) => {
+    activities = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderActivities();
+  }, err => console.warn('Aktivitas gagal dimuat:', err)));
+
+  unsubscribers.push(onSnapshot(query(collection(db, 'workspaces', state.workspaceId, 'announcements'), orderBy('createdAt', 'desc')), (snap) => {
+    announcements = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderAnnouncements();
+  }, err => console.warn('Pengumuman gagal dimuat:', err)));
 
   unsubscribers.push(onSnapshot(doc(db, 'workspaces', state.workspaceId), (docSnap) => {
     if (docSnap.exists()) {
@@ -505,6 +486,7 @@ function renderTasks() {
   if (!tbody) return;
   
   let filteredTasks = state.role === 'worker' ? state.tasks.filter(t => t.assignee === state.workerName) : [...state.tasks];
+  renderDeadlineBanner(filteredTasks);
   filteredTasks = applyTaskFilters(filteredTasks);
   
   if (filteredTasks.length === 0) {
@@ -513,6 +495,7 @@ function renderTasks() {
   }
 
   tbody.innerHTML = filteredTasks.map(task => {
+    const lv = dueLevel(task), prog = subProgress(task);
     const isOverdue = task.endDate && new Date(task.endDate + 'T23:59:59') < new Date() && task.status !== 'done';
     
     let statusText = 'Belum Mulai';
@@ -537,8 +520,8 @@ function renderTasks() {
     const shortDesc = task.desc ? (task.desc.length > 60 ? task.desc.substring(0, 60) + '...' : task.desc) : '-';
 
     return `
-      <tr onclick="openTaskDetailModal('${task.id}')">
-        <td><div style="font-weight:600; font-size:0.9rem;">${escapeHtml(task.title)}</div></td>
+      <tr class="${lv ? 'row-due-' + lv : ''}" onclick="openTaskDetailModal('${task.id}')">
+        <td><div style="font-weight:600; font-size:0.9rem;">${escapeHtml(task.title)}${(task.attachments || []).length ? ` <span class="clip-count" title="Lampiran">📎${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td>
         <td class="task-desc-cell"><div class="task-desc" title="${escapeHtml(task.desc || '')}">${escapeHtml(shortDesc)}</div></td>
         <td style="font-size:0.85rem; color:#4b5563;">${escapeHtml(task.assignee)}</td>
         <td class="col-center">
@@ -548,7 +531,7 @@ function renderTasks() {
           <span class="stat-pill ${statusClass}">${statusText}${isOverdue ? ' (Terlambat)' : ''}</span>
         </td>
         <td style="font-size:0.85rem; color:${isOverdue ? '#dc2626' : '#4b5563'}; font-weight:${isOverdue ? '600' : '400'};">
-          ${task.endDate || '-'}
+          ${escapeHtml(task.endDate || '-')}${lv ? ` <span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''}
         </td>
       </tr>`;
   }).join('');
@@ -564,7 +547,8 @@ window.openTaskDetailModal = (taskId) => {
 
   $('detailTaskTitle').textContent = task.title;
   $('detailTaskAssignee').textContent = task.assignee;
-  $('detailTaskDates').textContent = `📅 ${task.startDate || '?'} s/d ${task.endDate || '?'}`;
+  { const lv = dueLevel(task);
+    $('detailTaskDates').innerHTML = `📅 ${escapeHtml(task.startDate || '?')} s/d ${escapeHtml(task.endDate || '?')}` + (lv ? ` <span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''); }
   $('detailTaskDesc').textContent = task.desc || 'Tidak ada deskripsi tambahan.';
   
   let statusText = 'Belum Mulai';
@@ -645,6 +629,8 @@ window.openTaskDetailModal = (taskId) => {
     `;
   }
 
+  currentDetailId = task.id;
+  renderTaskExtras(task);
   $('taskDetailModal').classList.remove('hidden');
 };
 
@@ -672,7 +658,11 @@ window.openReportModalFromDetail = (taskId) => {
     history: arrayUnion({ type: 'laporan', by: state.workerName, text: notes, link: link, at: Date.now() }),
     revisionNotes: '',
     updatedAt: serverTimestamp()
-  }).then(() => alert('✅ Laporan terkirim ke Mentor!'));
+  }).then(() => {
+    logActivity('report', `${state.workerName} mengirim laporan “${task.title}”`, taskId);
+    notify(mentorUids(), { kind: 'report', title: `${state.workerName} mengirim laporan`, body: task.title, taskId });
+    alert('✅ Laporan terkirim ke Mentor!');
+  });
 };
 
 // Fungsi global untuk membuka modal review dari detail
@@ -691,7 +681,11 @@ window.openReviewModalFromDetail = (taskId, isRevision) => {
       revisionNotes: notes,
       history: arrayUnion({ type: 'revisi', by: state.workerName, text: notes, at: Date.now() }),
       updatedAt: serverTimestamp()
-    }).then(() => alert('↩ Catatan revisi dikirimkan ke pekerja!'));
+    }).then(() => {
+      logActivity('revision', `${state.workerName} meminta revisi “${task.title}”`, taskId);
+      notify([memberUid(task.assignee)], { kind: 'revision', title: 'Tugas perlu revisi', body: task.title, taskId });
+      alert('↩ Catatan revisi dikirimkan ke pekerja!');
+    });
   } else {
     const notes = prompt("Catatan validasi (opsional, kosongkan jika sempurna):") || '';
     
@@ -700,7 +694,11 @@ window.openReviewModalFromDetail = (taskId, isRevision) => {
       revisionNotes: '',
       history: arrayUnion({ type: 'selesai', by: state.workerName, text: notes, at: Date.now() }),
       updatedAt: serverTimestamp()
-    }).then(() => alert('✅ Tugas divalidasi selesai!'));
+    }).then(() => {
+      logActivity('done', `${state.workerName} memvalidasi “${task.title}” selesai`, taskId);
+      notify([memberUid(task.assignee)], { kind: 'done', title: 'Tugas divalidasi selesai', body: task.title, taskId });
+      alert('✅ Tugas divalidasi selesai!');
+    });
   }
 };
 
@@ -713,13 +711,20 @@ window.moveTask = async (taskId, newStatus) => {
   if (!ok) return alert('Perubahan status ini tidak diizinkan.');
   try {
     await updateDoc(doc(db, 'workspaces', state.workspaceId, 'tasks', taskId), { status: newStatus, updatedAt: serverTimestamp() });
+    if (newStatus === 'progress') logActivity('start', `${state.workerName} mulai mengerjakan “${t.title}”`, taskId);
+    else { logActivity('reopen', `${state.workerName} membuka kembali “${t.title}”`, taskId); notify([memberUid(t.assignee)], { kind: 'revision', title: 'Tugas dibuka kembali', body: t.title, taskId }); }
   } catch (err) { alert('Gagal: ' + err.message); }
 };
 
 // Fungsi global untuk menghapus tugas
 window.deleteTask = async (id) => {
   if (state.role !== 'mentor' || !confirm('Hapus tugas ini? Tindakan tidak bisa dibatalkan.')) return;
-  try { await deleteDoc(doc(db, 'workspaces', state.workspaceId, 'tasks', id)); }
+  try {
+    const t = state.tasks.find(x => x.id === id);
+    await Promise.all((t?.attachments || []).map(f => deleteObject(sRef(storage, f.path)).catch(() => {})));
+    await deleteDoc(doc(db, 'workspaces', state.workspaceId, 'tasks', id));
+    if (t) logActivity('delete', `${state.workerName} menghapus tugas “${t.title}”`);
+  }
   catch (err) { alert('Gagal: ' + err.message); }
 };
 
@@ -853,7 +858,7 @@ async function deleteWorkspace() {
   if (typed !== state.workspaceName) return alert('Nama tidak cocok.');
   try {
     const refs = [];
-    for (const sub of ['tasks', 'divisions', 'members']) {
+    for (const sub of ['tasks', 'divisions', 'members', 'activities', 'announcements']) {
       (await getDocs(collection(db, 'workspaces', state.workspaceId, sub))).forEach(d => refs.push(d.ref));
     }
     refs.push(doc(db, 'workspaces', state.workspaceId));
@@ -884,6 +889,317 @@ async function renameUser(newName, oldName) {
   }
   state.user = auth.currentUser;
   $('topbarUserName').textContent = newName;
+}
+
+/* =========================================
+   FITUR BARU — Aktivitas, Notifikasi, Sub-tugas, Tenggat,
+   Kalender, Lampiran, Pengumuman
+========================================= */
+const MAX_UPLOAD = 10 * 1024 * 1024; // 10 MB
+const ALLOWED_EXT = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'zip'];
+const WS_TABS = {
+  task: ['mainTaskContainer', 'tabTaskView'], calendar: ['calendarPanel', 'tabCalendarView'],
+  activity: ['activityPanel', 'tabActivityView'], announce: ['announcementPanel', 'tabAnnouncementView'],
+  division: ['divisionManagementPanel', 'tabDivisionView']
+};
+let notifications = [], notifUnsub = null, pendingTaskId = null, currentDetailId = null, justJoined = false;
+let activities = [], announcements = [], calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1), calExpanded = null;
+
+const taskRef = (id) => doc(db, 'workspaces', state.workspaceId, 'tasks', id);
+const newId = () => Math.random().toString(36).slice(2, 9);
+const fmtTime = (ts) => {
+  const d = ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
+  return d ? d.toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'baru saja';
+};
+const fmtSize = (b) => b < 1048576 ? Math.max(1, Math.round(b / 1024)) + ' KB' : (b / 1048576).toFixed(1) + ' MB';
+const fileIcon = (n) => {
+  const e = (n.split('.').pop() || '').toLowerCase();
+  return ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(e) ? '🖼' : e === 'pdf' ? '📕' : e === 'zip' ? '🗜' : ['xls', 'xlsx', 'csv'].includes(e) ? '📊' : '📄';
+};
+const memberUid = (name) => state.members.find(m => m.name === name)?.id;
+const mentorUids = () => state.members.filter(m => m.role === 'mentor').map(m => m.id);
+
+/* ---------- Deadline warning ---------- */
+function daysLeft(t) {
+  if (!t.endDate) return null;
+  return Math.round((new Date(t.endDate + 'T00:00:00') - new Date(localDate() + 'T00:00:00')) / 864e5);
+}
+function dueLevel(t) {
+  if (t.status === 'done') return null;
+  const d = daysLeft(t);
+  return d === null ? null : d < 0 ? 'overdue' : d <= 1 ? 'urgent' : d <= 3 ? 'soon' : null;
+}
+function dueLabel(t) {
+  const d = daysLeft(t);
+  return d < 0 ? `Terlambat ${-d} hari` : d === 0 ? 'Hari ini' : d === 1 ? 'Besok' : `H-${d}`;
+}
+function renderDeadlineBanner(tasks) {
+  const el = $('deadlineBanner'); if (!el) return;
+  const o = tasks.filter(t => dueLevel(t) === 'overdue').length;
+  const u = tasks.filter(t => ['urgent', 'soon'].includes(dueLevel(t))).length;
+  if (!o && !u) return el.classList.add('hidden');
+  el.className = 'deadline-banner ' + (o ? 'due-overdue' : 'due-urgent');
+  el.textContent = [o ? `${o} tugas melewati tenggat` : '', u ? `${u} tugas mendekati tenggat (3 hari ke depan)` : ''].filter(Boolean).join(' dan ');
+}
+
+/* ---------- Aktivitas ---------- */
+const ACT_ICON = { task: '🆕', start: '▶', report: '📤', revision: '↩', done: '✅', reopen: '🔄', delete: '🗑', file: '📎', join: '👋', announce: '📢', subtask: '☑' };
+function logActivity(type, text, taskId = null) {
+  if (!state.workspaceId) return;
+  addDoc(collection(db, 'workspaces', state.workspaceId, 'activities'), {
+    type, text, taskId, by: state.workerName || '', uid: state.user.uid, at: serverTimestamp()
+  }).catch(e => console.warn('Aktivitas gagal dicatat:', e));
+}
+function renderActivities() {
+  const el = $('activityList'); if (!el) return;
+  el.innerHTML = activities.length ? activities.map(a => `
+    <div class="act-item act-${escapeHtml(a.type)}">
+      <span class="act-icon">${ACT_ICON[a.type] || '•'}</span>
+      <div><div>${escapeHtml(a.text)}</div><span class="act-time">${fmtTime(a.at)}</span></div>
+    </div>`).join('') : '<p class="empty-hint">Belum ada aktivitas. Aktivitas baru akan muncul di sini.</p>';
+}
+
+/* ---------- Notification center ---------- */
+const NOTIF_ICON = { task: '🆕', report: '📤', revision: '↩', done: '✅', announce: '📢', file: '📎', due: '⏰' };
+function notify(uids, data) {
+  [...new Set(uids)].filter(u => u && u !== state.user.uid).forEach(uid => {
+    addDoc(collection(db, 'users', uid, 'notifications'), {
+      ...data, workspaceId: state.workspaceId, workspaceName: state.workspaceName, read: false, createdAt: serverTimestamp()
+    }).catch(e => console.warn('Notifikasi gagal dikirim:', e));
+  });
+}
+function startNotifications() {
+  stopNotifications();
+  notifUnsub = onSnapshot(query(collection(db, 'users', state.user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(60)), (snap) => {
+    notifications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderNotifications();
+  }, err => console.warn('Notifikasi gagal dimuat:', err));
+}
+function stopNotifications() {
+  if (notifUnsub) { notifUnsub(); notifUnsub = null; }
+  notifications = []; renderNotifications();
+}
+function renderNotifications() {
+  const unread = notifications.filter(n => !n.read).length;
+  const badge = $('notifBadge');
+  if (badge) { badge.textContent = unread > 99 ? '99+' : unread; badge.classList.toggle('hidden', !unread); }
+  const list = $('dashboardNotificationsList'); if (!list) return;
+  $('markAllReadBtn')?.classList.toggle('hidden', !unread);
+  list.innerHTML = notifications.length ? notifications.map(n => `
+    <button type="button" class="notif-item ${n.read ? '' : 'unread'}" onclick="openNotification('${n.id}')">
+      <span class="notif-icon">${NOTIF_ICON[n.kind] || '🔔'}</span>
+      <span class="notif-copy"><strong>${escapeHtml(n.title)}</strong><span>${escapeHtml(n.body || '')}</span><small>${escapeHtml(n.workspaceName || '')} · ${fmtTime(n.createdAt)}</small></span>
+      ${n.read ? '' : '<span class="notif-dot" aria-label="Belum dibaca"></span>'}
+    </button>`).join('') : '<p class="empty-hint">Belum ada notifikasi. Tugas baru, laporan, pengumuman, dan tenggat akan muncul di sini.</p>';
+}
+function renderDashboardNotifications() { renderNotifications(); }
+async function markAllRead() {
+  const un = notifications.filter(n => !n.read); if (!un.length) return;
+  const b = writeBatch(db);
+  un.forEach(n => b.update(doc(db, 'users', state.user.uid, 'notifications', n.id), { read: true }));
+  try { await b.commit(); } catch (err) { alert('Gagal: ' + err.message); }
+}
+window.openNotification = async (id) => {
+  const n = notifications.find(x => x.id === id); if (!n) return;
+  if (!n.read) updateDoc(doc(db, 'users', state.user.uid, 'notifications', id), { read: true }).catch(() => {});
+  if (!n.workspaceId) return;
+  pendingTaskId = n.taskId || null;
+  await window.openWorkspace(n.workspaceId);
+  if (state.workspaceId !== n.workspaceId) { pendingTaskId = null; return; }
+  if (n.kind === 'announce') switchWorkspaceTab('announce');
+};
+// Notifikasi tenggat dibuat sekali per tugas per tingkat peringatan (id deterministik)
+async function syncDeadlineNotifications() {
+  const items = [];
+  dashboardWorkspaces.forEach(ws => (ws.tasks || []).forEach(t => {
+    if (ws.role !== 'mentor' && t.assignee !== ws.workerName) return;
+    const lv = dueLevel(t);
+    if (lv) items.push({ ws, t, lv });
+  }));
+  await Promise.all(items.map(async ({ ws, t, lv }) => {
+    const ref = doc(db, 'users', state.user.uid, 'notifications', `due_${t.id}_${lv}`);
+    try {
+      if ((await getDoc(ref)).exists()) return;
+      await setDoc(ref, {
+        kind: 'due', title: lv === 'overdue' ? 'Tugas melewati tenggat' : 'Tenggat mendekat',
+        body: `${t.title} · ${dueLabel(t)}`, workspaceId: ws.id, workspaceName: ws.name, taskId: t.id, read: false, createdAt: serverTimestamp()
+      });
+    } catch (e) { console.warn('Notifikasi tenggat gagal:', e); }
+  }));
+}
+
+/* ---------- Sub-tugas & progres otomatis ---------- */
+const subProgress = (t) => {
+  const s = t.subtasks || []; if (!s.length) return null;
+  const d = s.filter(x => x.done).length;
+  return { done: d, total: s.length, pct: Math.round(d / s.length * 100) };
+};
+const progressBar = (p) => `<div class="progress-row"><div class="progress-track"><div class="progress-fill ${p.pct === 100 ? 'full' : ''}" style="width:${p.pct}%"></div></div><span>${p.pct}%</span></div>`;
+const parseSubtasks = (text) => text.split('\n').map(x => x.trim()).filter(Boolean).slice(0, 30).map(x => ({ id: newId(), text: x.slice(0, 120), done: false }));
+const canEditTask = (t) => state.role === 'mentor' || (state.role === 'worker' && t.assignee === state.workerName);
+
+window.toggleSubtask = async (taskId, subId, checked) => {
+  const t = state.tasks.find(x => x.id === taskId); if (!t || !canEditTask(t)) return;
+  const before = subProgress(t);
+  const subtasks = (t.subtasks || []).map(s => s.id === subId ? { ...s, done: checked } : s);
+  try {
+    await updateDoc(taskRef(taskId), { subtasks, updatedAt: serverTimestamp() });
+    if (checked && subtasks.every(s => s.done) && before.pct < 100) logActivity('subtask', `${state.workerName} menyelesaikan semua sub-tugas “${t.title}”`, taskId);
+  } catch (err) { alert('Gagal: ' + err.message); }
+};
+window.deleteSubtask = async (taskId, subId) => {
+  const t = state.tasks.find(x => x.id === taskId); if (!t || state.role !== 'mentor') return;
+  try { await updateDoc(taskRef(taskId), { subtasks: (t.subtasks || []).filter(s => s.id !== subId), updatedAt: serverTimestamp() }); }
+  catch (err) { alert('Gagal: ' + err.message); }
+};
+async function addSubtaskFromModal() {
+  const t = state.tasks.find(x => x.id === currentDetailId); const input = $('subtaskInput');
+  const text = input.value.trim(); if (!t || !text || state.role !== 'mentor') return;
+  if ((t.subtasks || []).length >= 30) return alert('Maksimal 30 sub-tugas.');
+  try { await updateDoc(taskRef(t.id), { subtasks: [...(t.subtasks || []), { id: newId(), text: text.slice(0, 120), done: false }], updatedAt: serverTimestamp() }); input.value = ''; }
+  catch (err) { alert('Gagal: ' + err.message); }
+}
+
+/* ---------- Detail tugas: sub-tugas & lampiran ---------- */
+function renderTaskExtras(task) {
+  const isMentor = state.role === 'mentor', canEdit = canEditTask(task);
+  const subs = task.subtasks || [], p = subProgress(task);
+  $('detailSubtaskBox').classList.toggle('hidden', !subs.length && !isMentor);
+  $('detailProgressFill').style.width = (p ? p.pct : 0) + '%';
+  $('detailProgressFill').classList.toggle('full', !!p && p.pct === 100);
+  $('detailProgressText').textContent = p ? `${p.done}/${p.total} · ${p.pct}%` : '0%';
+  $('detailSubtaskAdd').classList.toggle('hidden', !isMentor);
+  $('detailSubtaskList').innerHTML = subs.length ? subs.map(s => `
+    <label class="subtask-item ${s.done ? 'done' : ''}">
+      <input type="checkbox" ${s.done ? 'checked' : ''} ${canEdit ? '' : 'disabled'} onchange="toggleSubtask('${task.id}','${s.id}',this.checked)" />
+      <span>${escapeHtml(s.text)}</span>
+      ${isMentor ? `<button type="button" class="icon-del" title="Hapus sub-tugas" onclick="event.preventDefault();deleteSubtask('${task.id}','${s.id}')">×</button>` : ''}
+    </label>`).join('') : '<p class="empty-hint">Belum ada sub-tugas.</p>';
+
+  const files = task.attachments || [];
+  $('attachUploader').classList.toggle('hidden', !canEdit);
+  $('detailAttachList').innerHTML = files.length ? files.map(f => {
+    const href = safeUrl(f.url), canDel = isMentor || f.uid === state.user.uid;
+    return `<div class="attach-item"><span>${fileIcon(f.name)}</span>
+      <div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${fmtSize(f.size)} · ${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div>
+      ${canDel ? `<button type="button" class="icon-del" title="Hapus lampiran" onclick="deleteAttachment('${task.id}','${f.id}')">×</button>` : ''}</div>`;
+  }).join('') : '<p class="empty-hint">Belum ada lampiran.</p>';
+}
+function afterTasksUpdate() {
+  renderCalendar();
+  if (currentDetailId && !$('taskDetailModal').classList.contains('hidden') && !$('attachProgress').classList.contains('uploading')) {
+    if (state.tasks.some(t => t.id === currentDetailId)) window.openTaskDetailModal(currentDetailId);
+    else window.closeTaskDetailModal();
+  }
+  if (pendingTaskId && state.tasks.some(t => t.id === pendingTaskId)) {
+    const id = pendingTaskId; pendingTaskId = null; window.openTaskDetailModal(id);
+  }
+}
+
+async function uploadAttachment(file) {
+  const t = state.tasks.find(x => x.id === currentDetailId); if (!t || !canEditTask(t)) return;
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (!ALLOWED_EXT.includes(ext)) return alert('Tipe file tidak didukung. Gunakan: ' + ALLOWED_EXT.join(', '));
+  if (file.size > MAX_UPLOAD) return alert('Ukuran file maksimal 10 MB.');
+  const id = newId(), path = `workspaces/${state.workspaceId}/tasks/${t.id}/${id}_${file.name.replace(/[^\w.\-]+/g, '_')}`;
+  const bar = $('attachProgress'), fill = $('attachProgressFill'), txt = $('attachProgressText');
+  bar.classList.remove('hidden'); bar.classList.add('uploading'); fill.style.width = '0%'; txt.textContent = '0%';
+  try {
+    const task = uploadBytesResumable(sRef(storage, path), file);
+    await new Promise((res, rej) => task.on('state_changed', (s) => {
+      const pct = Math.round(s.bytesTransferred / s.totalBytes * 100); fill.style.width = pct + '%'; txt.textContent = pct + '%';
+    }, rej, res));
+    const url = await getDownloadURL(task.snapshot.ref);
+    await updateDoc(taskRef(t.id), {
+      attachments: arrayUnion({ id, name: file.name, size: file.size, type: file.type, url, path, by: state.workerName, uid: state.user.uid, at: Date.now() }),
+      updatedAt: serverTimestamp()
+    });
+    logActivity('file', `${state.workerName} melampirkan “${file.name}” pada “${t.title}”`, t.id);
+    notify(state.role === 'mentor' ? [memberUid(t.assignee)] : mentorUids(), { kind: 'file', title: 'Lampiran baru', body: `${file.name} · ${t.title}`, taskId: t.id });
+  } catch (err) { alert('Gagal mengunggah: ' + (err.code || err.message)); }
+  finally { bar.classList.remove('uploading'); bar.classList.add('hidden'); afterTasksUpdate(); }
+}
+window.deleteAttachment = async (taskId, fid) => {
+  const t = state.tasks.find(x => x.id === taskId); const f = (t?.attachments || []).find(x => x.id === fid); if (!f) return;
+  if (!(state.role === 'mentor' || f.uid === state.user.uid) || !confirm(`Hapus lampiran "${f.name}"?`)) return;
+  try {
+    await deleteObject(sRef(storage, f.path)).catch(e => { if (e.code !== 'storage/object-not-found') throw e; });
+    await updateDoc(taskRef(taskId), { attachments: arrayRemove(f), updatedAt: serverTimestamp() });
+  } catch (err) { alert('Gagal: ' + (err.code || err.message)); }
+};
+
+/* ---------- Kalender tenggat ---------- */
+const chipClass = (t) => t.status === 'done' ? 'chip-done' : ({ overdue: 'due-overdue', urgent: 'due-urgent', soon: 'due-soon' }[dueLevel(t)] || 'chip-normal');
+window.expandCalDay = (k) => { calExpanded = calExpanded === k ? null : k; renderCalendar(); };
+function renderCalendar() {
+  const grid = $('calGrid'); if (!grid || $('calendarPanel').classList.contains('hidden')) return;
+  const y = calMonth.getFullYear(), m = calMonth.getMonth(), today = localDate();
+  $('calTitle').textContent = calMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  const offset = (new Date(y, m, 1).getDay() + 6) % 7, days = new Date(y, m + 1, 0).getDate();
+  const tasks = (state.role === 'worker' ? state.tasks.filter(t => t.assignee === state.workerName) : state.tasks).filter(t => t.endDate);
+  const byDay = {}; tasks.forEach(t => (byDay[t.endDate] = byDay[t.endDate] || []).push(t));
+  let html = '<div class="cal-cell empty"></div>'.repeat(offset);
+  for (let d = 1; d <= days; d++) {
+    const key = localDate(new Date(y, m, d)), list = byDay[key] || [], max = key === calExpanded ? 99 : 3;
+    html += `<div class="cal-cell ${key === today ? 'today' : ''}"><span class="cal-day">${d}</span>`
+      + list.slice(0, max).map(t => `<button type="button" class="cal-chip ${chipClass(t)}" onclick="openTaskDetailModal('${t.id}')" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</button>`).join('')
+      + (list.length > 3 ? `<button type="button" class="cal-more" onclick="expandCalDay('${key}')">${key === calExpanded ? 'Ringkas' : `+${list.length - 3} lagi`}</button>` : '') + '</div>';
+  }
+  grid.innerHTML = html;
+}
+
+/* ---------- Papan pengumuman ---------- */
+function renderAnnouncements() {
+  const el = $('announceList'); if (!el) return;
+  const isMentor = state.role === 'mentor';
+  const list = [...announcements].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
+  el.innerHTML = list.length ? list.map(a => `
+    <article class="announce-item ${a.pinned ? 'pinned' : ''}">
+      <div class="announce-head"><h4>${a.pinned ? '📌 ' : ''}${escapeHtml(a.title)}</h4>
+        ${isMentor ? `<div class="announce-actions">
+          <button type="button" class="btn-sm btn-ghost" onclick="togglePinAnnouncement('${a.id}')">${a.pinned ? 'Lepas pin' : 'Sematkan'}</button>
+          <button type="button" class="btn-sm btn-ghost" onclick="editAnnouncement('${a.id}')">Edit</button>
+          <button type="button" class="btn-sm btn-warning" onclick="deleteAnnouncement('${a.id}')">Hapus</button></div>` : ''}
+      </div>
+      <p>${escapeHtml(a.body)}</p><small>${escapeHtml(a.by || 'Mentor')} · ${fmtTime(a.createdAt)}</small>
+    </article>`).join('') : '<p class="empty-hint">Belum ada pengumuman dari mentor.</p>';
+}
+const annRef = (id) => doc(db, 'workspaces', state.workspaceId, 'announcements', id);
+window.togglePinAnnouncement = (id) => { const a = announcements.find(x => x.id === id); if (a && state.role === 'mentor') updateDoc(annRef(id), { pinned: !a.pinned }).catch(e => alert('Gagal: ' + e.message)); };
+window.editAnnouncement = (id) => {
+  const a = announcements.find(x => x.id === id); if (!a || state.role !== 'mentor') return;
+  const title = prompt('Judul pengumuman:', a.title); if (title === null) return;
+  const body = prompt('Isi pengumuman:', a.body); if (body === null) return;
+  if (!title.trim() || !body.trim()) return alert('Judul dan isi wajib diisi.');
+  updateDoc(annRef(id), { title: title.trim(), body: body.trim(), updatedAt: serverTimestamp() }).catch(e => alert('Gagal: ' + e.message));
+};
+window.deleteAnnouncement = (id) => { if (state.role === 'mentor' && confirm('Hapus pengumuman ini?')) deleteDoc(annRef(id)).catch(e => alert('Gagal: ' + e.message)); };
+async function postAnnouncement(e) {
+  e.preventDefault(); if (state.role !== 'mentor') return;
+  const title = $('announceTitle').value.trim(), body = $('announceBody').value.trim(); if (!title || !body) return;
+  try {
+    await addDoc(collection(db, 'workspaces', state.workspaceId, 'announcements'), {
+      title, body, pinned: $('announcePinned').checked, by: state.workerName, uid: state.user.uid, createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+    });
+    e.target.reset();
+    logActivity('announce', `${state.workerName} memposting pengumuman “${title}”`);
+    notify(state.members.map(m => m.id), { kind: 'announce', title: 'Pengumuman baru', body: title });
+  } catch (err) { alert('Gagal: ' + err.message); }
+}
+
+function setupNewFeatureListeners() {
+  $('markAllReadBtn').addEventListener('click', markAllRead);
+  const shift = (n) => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1); calExpanded = null; renderCalendar(); };
+  $('calPrev').addEventListener('click', () => shift(-1));
+  $('calNext').addEventListener('click', () => shift(1));
+  $('calToday').addEventListener('click', () => { calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1); renderCalendar(); });
+  $('tabCalendarView').addEventListener('click', () => switchWorkspaceTab('calendar'));
+  $('tabActivityView').addEventListener('click', () => switchWorkspaceTab('activity'));
+  $('tabAnnouncementView').addEventListener('click', () => switchWorkspaceTab('announce'));
+  $('addSubtaskBtn').addEventListener('click', addSubtaskFromModal);
+  $('subtaskInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addSubtaskFromModal(); } });
+  $('attachInput').addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) uploadAttachment(f); });
+  $('announceForm').addEventListener('submit', postAnnouncement);
 }
 
 function setupEventListeners() {
@@ -971,7 +1287,8 @@ function setupEventListeners() {
     const startDate = $('startDate').value, endDate = $('endDate').value;
     if (startDate && endDate && endDate < startDate) return alert('Tenggat tidak boleh lebih awal dari mulai.');
     try {
-      await addDoc(collection(db, 'workspaces', state.workspaceId, 'tasks'), {
+      const taskTitle = $('taskTitle').value.trim(), assigneeName = $('taskAssignee').value;
+      const newRef = await addDoc(collection(db, 'workspaces', state.workspaceId, 'tasks'), {
         title: $('taskTitle').value.trim(),
         assignee: $('taskAssignee').value,
         difficulty: $('taskDifficulty').value,
@@ -979,10 +1296,13 @@ function setupEventListeners() {
         desc: $('taskDesc').value.trim(),
         driveSource: $('taskDriveSource').value,
         status: 'todo', reportNotes: '', reportFileLink: '', revisionNotes: '',
+        subtasks: parseSubtasks($('taskSubtasks').value), attachments: [],
         createdAt: serverTimestamp(), updatedAt: serverTimestamp()
       });
       e.target.reset();
       $('taskDifficulty').value = 'sedang';
+      logActivity('task', `${state.workerName} membuat tugas “${taskTitle}” untuk ${assigneeName}`, newRef.id);
+      notify([memberUid(assigneeName)], { kind: 'task', title: 'Tugas baru untuk Anda', body: taskTitle, taskId: newRef.id });
       setDefaultDates();
       toggleWorkspaceDriveGroup();
       alert('✅ Tugas dibagikan!');
@@ -1056,9 +1376,11 @@ function init() {
   setDefaultDates();
   initDarkMode(); // Inisialisasi Dark Mode
   setupEventListeners();
+  setupNewFeatureListeners();
   onAuthStateChanged(auth, (user) => {
     if (user) {
       state.user = user;
+      startNotifications();
       const userRef = doc(db, 'users', user.uid);
       getDoc(userRef).then(snap => {
         if (!snap.exists()) {
@@ -1068,6 +1390,7 @@ function init() {
     } else {
       unsubscribers.forEach(u => u());
       unsubscribers = [];
+      stopNotifications();
       state = { user: null, workspaceId: null, workspaceName: null, role: null, workerName: null, driveLink: '', members: [], tasks: [], divisions: [] };
       showAuthView();
     }
