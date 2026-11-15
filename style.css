@@ -1362,6 +1362,19 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   border-color: transparent;
 }
 
+.ws-back-dashboard {
+  background: rgba(255, 140, 82, 0.25);
+  border-color: rgba(255, 140, 82, 0.5);
+  color: #ffffff;
+  margin-bottom: 0.5rem;
+}
+
+.ws-back-dashboard:hover {
+  background: rgba(255, 140, 82, 0.45);
+  border-color: #FF8C52;
+  transform: translateX(2px);
+}
+
 .ws-sidebar-bottom {
   margin-top: auto;
   display: flex; flex-direction: column;
