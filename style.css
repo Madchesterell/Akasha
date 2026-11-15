@@ -403,3 +403,96 @@ button:disabled { opacity: 0.6; cursor: not-allowed; }
   .btn-workspace-action { width: 100%; justify-content: center; }
   #detailActionButtons .btn-sm { min-width: 100%; }
 }
+
+/* =========================================
+   FITUR BARU — Notifikasi, Tenggat, Progres, Kalender,
+   Lampiran, Aktivitas, Pengumuman
+========================================= */
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.detail-section { margin-bottom: 1.5rem; }
+.detail-label { display: block; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 0.4rem; }
+.icon-del { background: none; border: none; color: var(--text-faint); font-size: 1.15rem; line-height: 1; cursor: pointer; padding: 0 0.35rem; }
+.icon-del:hover { color: var(--danger); }
+.clip-count { font-size: 0.72rem; color: var(--text-muted); font-weight: 600; }
+
+/* Notifikasi */
+.nav-badge { margin-left: auto; min-width: 20px; padding: 0 6px; height: 20px; border-radius: 999px; background: #ef4444; color: #fff; font-size: 0.7rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.notif-item { display: flex; align-items: flex-start; gap: 0.8rem; width: 100%; text-align: left; padding: 0.85rem 1rem; margin-bottom: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); cursor: pointer; transition: background var(--transition), border-color var(--transition); }
+.notif-item:hover { border-color: var(--primary); background: var(--primary-soft); }
+.notif-item.unread { border-left: 4px solid var(--primary); background: var(--primary-soft); }
+.notif-icon { font-size: 1.15rem; line-height: 1.4; }
+.notif-copy { display: flex; flex-direction: column; gap: 0.1rem; flex: 1; min-width: 0; font-size: 0.85rem; }
+.notif-copy strong { font-size: 0.9rem; }
+.notif-copy small { color: var(--text-muted); font-size: 0.75rem; }
+.notif-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--primary); margin-top: 0.4rem; flex-shrink: 0; }
+
+/* Tenggat */
+.due-badge { display: inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; font-size: 0.7rem; font-weight: 700; vertical-align: middle; }
+.due-badge.due-overdue, .cal-chip.due-overdue, .deadline-banner.due-overdue { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.due-badge.due-urgent, .cal-chip.due-urgent, .deadline-banner.due-urgent { background: #ffedd5; color: #9a3412; border-color: #fdba74; }
+.due-badge.due-soon, .cal-chip.due-soon { background: #fef9c3; color: #854d0e; border-color: #fde047; }
+#taskTableBody tr.row-due-overdue td:first-child { box-shadow: inset 4px 0 0 #dc2626; }
+#taskTableBody tr.row-due-urgent td:first-child { box-shadow: inset 4px 0 0 #f97316; }
+#taskTableBody tr.row-due-soon td:first-child { box-shadow: inset 4px 0 0 #eab308; }
+.deadline-banner { margin: 0.9rem 1rem 0; padding: 0.65rem 0.9rem; border: 1px solid; border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 600; }
+
+/* Progres & sub-tugas */
+.progress-row { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.35rem; font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
+.progress-track { flex: 1; height: 7px; border-radius: 999px; background: var(--border); overflow: hidden; min-width: 70px; }
+.progress-fill { height: 100%; width: 0; border-radius: 999px; background: var(--primary); transition: width 0.3s ease; }
+.progress-fill.full { background: var(--success); }
+.subtask-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.4rem 0; font-size: 0.875rem; cursor: pointer; }
+.subtask-item input { width: 16px; height: 16px; flex-shrink: 0; }
+.subtask-item span { flex: 1; word-break: break-word; }
+.subtask-item.done span { text-decoration: line-through; color: var(--text-faint); }
+
+/* Lampiran */
+.attach-item { display: flex; align-items: center; gap: 0.65rem; padding: 0.5rem 0.75rem; margin-bottom: 0.4rem; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.attach-meta { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.attach-meta a { font-size: 0.85rem; font-weight: 600; word-break: break-all; }
+.attach-meta small { color: var(--text-muted); font-size: 0.72rem; }
+.attach-pick { display: inline-block; cursor: pointer; }
+
+/* Kalender */
+.cal-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+.cal-nav { display: flex; gap: 0.4rem; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-dow span { text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); padding: 0.4rem 0; }
+.cal-cell { min-height: 96px; padding: 0.3rem; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.cal-cell.empty { background: transparent; border-color: transparent; }
+.cal-cell.today { border-color: var(--primary); box-shadow: inset 0 0 0 1px var(--primary); }
+.cal-day { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); }
+.cal-cell.today .cal-day { color: var(--primary); }
+.cal-chip { display: block; width: 100%; text-align: left; padding: 2px 6px; border: 1px solid transparent; border-radius: 4px; font-size: 0.7rem; font-weight: 600; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cal-chip.chip-normal { background: var(--primary-soft); color: var(--primary); border-color: var(--primary-border); }
+.cal-chip.chip-done { background: var(--success-bg); color: var(--success); border-color: var(--success-border); text-decoration: line-through; }
+.cal-more { background: none; border: none; color: var(--text-muted); font-size: 0.7rem; text-align: left; cursor: pointer; padding: 0 2px; }
+
+/* Aktivitas */
+.act-item { display: flex; gap: 0.8rem; padding: 0.7rem 0; border-bottom: 1px solid var(--border-light); font-size: 0.875rem; }
+.act-item:last-child { border-bottom: none; }
+.act-icon { width: 28px; height: 28px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--primary-soft); font-size: 0.85rem; }
+.act-time { font-size: 0.75rem; color: var(--text-muted); }
+
+/* Pengumuman */
+.announce-item { padding: 1rem 1.1rem; margin-bottom: 0.8rem; border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.announce-item.pinned { border-left: 4px solid var(--warning); background: var(--primary-soft); }
+.announce-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; }
+.announce-head h4 { font-size: 1rem; }
+.announce-actions { display: flex; gap: 0.4rem; }
+.announce-item p { margin: 0.4rem 0; white-space: pre-wrap; word-break: break-word; font-size: 0.9rem; }
+.announce-item small { color: var(--text-muted); font-size: 0.75rem; }
+
+/* Mode gelap */
+body.dark-mode .due-badge.due-overdue, body.dark-mode .cal-chip.due-overdue, body.dark-mode .deadline-banner.due-overdue { background: #450a0a; color: #fecaca; border-color: #7f1d1d; }
+body.dark-mode .due-badge.due-urgent, body.dark-mode .cal-chip.due-urgent, body.dark-mode .deadline-banner.due-urgent { background: #431407; color: #fed7aa; border-color: #9a3412; }
+body.dark-mode .due-badge.due-soon, body.dark-mode .cal-chip.due-soon { background: #422006; color: #fef08a; border-color: #854d0e; }
+body.dark-mode .notif-item:hover, body.dark-mode .notif-item.unread, body.dark-mode .announce-item.pinned { background: #1e3a5f; }
+body.dark-mode .cal-cell, body.dark-mode .attach-item { background: #1e293b; }
+body.dark-mode .cal-cell.empty { background: transparent; }
+
+@media (max-width: 768px) {
+  .cal-cell { min-height: 64px; }
+  .cal-chip { font-size: 0.62rem; padding: 1px 3px; }
+  .announce-actions { width: 100%; }
+}
