@@ -146,8 +146,8 @@ function showDashboardView() {
   const name = state.user?.displayName || state.user?.email || 'Pengguna';
   const initials = name.split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('');
   if ($('topbarUserName')) $('topbarUserName').textContent = name;
-  if ($('topbarUserRole')) $('topbarUserRole').textContent = 'Anggota';
-  if ($('topbarUserAvatar')) $('topbarUserAvatar').textContent = initials || 'WP';
+  if ($('topbarUserRole')) $('topbarUserRole').textContent = 'Member';
+  if ($('topbarUserAvatar')) $('topbarUserAvatar').textContent = initials || 'A';
   loadUserWorkspaces();
   switchDashboardSection('home');
 }
@@ -157,7 +157,7 @@ function switchDashboardSection(section) {
   $('dashboardNavBtn')?.classList.toggle('active', section === 'home');
   $('myWorkspacesNavBtn')?.classList.toggle('active', section === 'workspaces');
   $('notificationsNavBtn')?.classList.toggle('active', section === 'notifications');
-  $('dashboardPageTitle').textContent = ({ home: 'Dashboard', workspaces: 'Ruang Kerja Saya', notifications: 'Notifikasi' })[section] || 'Dashboard';
+  $('dashboardPageTitle').textContent = ({ home: 'Dashboard', workspaces: 'Workspace Saya', notifications: 'Notifikasi' })[section] || 'Dashboard';
   if (section === 'notifications') renderFullNotifications();
 }
 
@@ -165,15 +165,15 @@ function showWorkspaceView() {
   $('authView').classList.add('hidden');
   $('dashboardView').classList.add('hidden');
   $('workspaceView').classList.remove('hidden');
-  $('workspaceTitle').textContent = state.workspaceName || 'Ruang Kerja';
-  const isMentor = state.role === 'mentor';
-  $('tabDivisionView')?.classList.toggle('hidden', !isMentor);
-  $('tabTaskLabel').textContent = isMentor ? 'Papan Tugas' : 'Tugas Saya';
-  $('mentorPanel').classList.toggle('hidden', !isMentor);
-  $('mentorTaskCreator').classList.toggle('hidden', !isMentor);
-  $('announceCreator').classList.toggle('hidden', !isMentor);
-  $('dailyGoalSection')?.classList.toggle('hidden', isMentor);
-  $('roleControls').innerHTML = `<span>${isMentor ? 'Mentor / Admin' : 'Anggota'} · <strong>${escapeHtml(state.workerName)}</strong></span>`;
+  $('workspaceTitle').textContent = state.workspaceName || 'Workspace';
+  const isLead = state.role === 'mentor';
+  $('tabDivisionView')?.classList.toggle('hidden', !isLead);
+  $('tabTaskLabel').textContent = isLead ? 'Task Board' : 'My Tasks';
+  $('mentorPanel').classList.toggle('hidden', !isLead);
+  $('mentorTaskCreator').classList.toggle('hidden', !isLead);
+  $('announceCreator').classList.toggle('hidden', !isLead);
+  $('dailyGoalSection')?.classList.toggle('hidden', isLead);
+  $('roleControls').innerHTML = `<span>${isLead ? 'Lead' : 'Member'} · <strong>${escapeHtml(state.workerName)}</strong></span>`;
   startHeartbeat();
   switchWorkspaceTab('task');
 }
@@ -419,7 +419,7 @@ async function handleCreateWorkspace(e) {
     const existing = await getDocs(query(collection(db, 'workspaces'), where('joinCode', '==', codeInput), limit(1)));
     if (!existing.empty) return alert('Kode undangan sudah digunakan.');
     const uid = state.user.uid;
-    const mentorName = state.user.displayName || 'Mentor';
+    const mentorName = state.user.displayName || 'Lead';
     const wsRef = doc(collection(db, 'workspaces'));
     const batch = writeBatch(db);
     batch.set(wsRef, { name, ownerUid: uid, joinCode: codeInput, driveLink: drive ? safeUrl(drive) : '', createdAt: serverTimestamp() });
@@ -435,7 +435,7 @@ async function handleCreateWorkspace(e) {
     showWorkspaceView();
     subscribeToWorkspace();
   } catch (err) { alert('Gagal membuat ruang kerja: ' + err.message); }
-  finally { btn.disabled = false; btn.textContent = 'Buat Ruang Kerja'; }
+  finally { btn.disabled = false; btn.textContent = 'Buat Workspace'; }
 }
 
 async function handleJoinWorkspace(e) {
@@ -477,7 +477,7 @@ async function handleJoinWorkspace(e) {
     showWorkspaceView();
     subscribeToWorkspace();
   } catch (err) { alert('Gagal bergabung: ' + err.message); }
-  finally { btn.disabled = false; btn.textContent = 'Gabung Ruang Kerja'; }
+  finally { btn.disabled = false; btn.textContent = 'Gabung Workspace'; }
 }
 
 window.openWorkspace = async (workspaceId) => {
@@ -568,7 +568,7 @@ function updateAssigneeSelect() {
     select.innerHTML = '<option value="">(Belum ada pekerja)</option>';
     return;
   }
-  let html = `<option value="__all">👥 Semua Anggota (${workers.length})</option>`;
+  let html = `<option value="__all">👥 Semua Member (${workers.length})</option>`;
   html += '<optgroup label="🏷 Per Divisi">';
   divNames.forEach(d => {
     html += `<option value="__div:${escapeHtml(d)}" ${cnt(d) ? '' : 'disabled'}>Divisi ${escapeHtml(d)} (${cnt(d)})</option>`;
@@ -709,7 +709,7 @@ window.openTaskDetailModal = (taskId) => {
 
   // AUTO-START: pekerja buka detail → status todo → progress
   const isWorker = state.role === 'worker' && task.assignee === state.workerName;
-  const isMentor = state.role === 'mentor';
+  const isLead = state.role === 'mentor';
   if (isWorker && task.status === 'todo' && !autoStarted.has(task.id)) {
     autoStarted.add(task.id);
     updateDoc(taskRef(task.id), { status: 'progress', updatedAt: serverTimestamp() }).then(() => {
@@ -722,7 +722,7 @@ window.openTaskDetailModal = (taskId) => {
   // Form laporan: hanya tampil jika pekerja + status todo/progress
   $('detailReportBox').classList.toggle('hidden', !(isWorker && ['todo', 'progress'].includes(task.status)));
   // Form review: hanya tampil jika mentor + status review
-  $('detailReviewBox').classList.toggle('hidden', !(isMentor && task.status === 'review'));
+  $('detailReviewBox').classList.toggle('hidden', !(isLead && task.status === 'review'));
 
   // Reset form values
   $('reportLink').value = task.reportFileLink || '';
@@ -736,13 +736,13 @@ window.openTaskDetailModal = (taskId) => {
   actionContainer.innerHTML = '';
   if (isWorker && ['todo', 'progress'].includes(task.status)) {
     actionContainer.innerHTML = `<button class="btn-sm" onclick="submitReport()">📤 Kirim Laporan</button>`;
-  } else if (isMentor && task.status === 'review') {
+  } else if (isLead && task.status === 'review') {
     actionContainer.innerHTML = `
       <div class="action-group">
         <button class="btn-sm btn-warning" onclick="submitReview(true)">↩ Revisi</button>
         <button class="btn-sm btn-success" onclick="submitReview(false)">✅ Selesai</button>
       </div>`;
-  } else if (isMentor) {
+  } else if (isLead) {
     // Selesai = final. Hanya Edit & Hapus.
     actionContainer.innerHTML = `
       <div class="action-group">
@@ -784,7 +784,7 @@ window.submitReport = async () => {
     });
     logActivity('report', `${state.workerName} mengirim laporan "${t.title}"`, t.id);
     notify(mentorUids(), { kind: 'report', title: `${state.workerName} mengirim laporan`, body: t.title, taskId: t.id });
-    toast('✅ Laporan terkirim ke Mentor!', 'success');
+    toast('✅ Laporan terkirim ke Lead!', 'success');
     window.closeTaskDetailModal();
   } catch (e) {
     err.textContent = 'Gagal: ' + e.message;
@@ -869,7 +869,7 @@ function renderDivisionManagement() {
         return `<div style="border:1px solid var(--border); padding:12px; border-radius:8px; margin-bottom:10px; background:var(--surface); display:flex; justify-content:space-between; align-items:center;">
           <div><h4 style="margin:0; font-size:1rem;">${escapeHtml(d.name)}</h4><p style="margin:4px 0 0; font-size:0.8rem; color:var(--text-muted);">${escapeHtml(d.desc || 'Tidak ada deskripsi.')}</p></div>
           <div style="display:flex; align-items:center; gap:12px;">
-            <span style="background:var(--primary-soft); color:var(--primary); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">${countEmp} Anggota</span>
+            <span style="background:var(--primary-soft); color:var(--primary); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">${countEmp} Member</span>
             <button class="btn-sm btn-warning" onclick="deleteDivision('${d.id}')" style="font-size:0.7rem;">Hapus</button>
           </div>
         </div>`;
@@ -884,7 +884,7 @@ function renderDivisionManagement() {
     tableBody.innerHTML = state.members.map(m => `<tr>
       <td style="padding:10px; font-weight:500;">${escapeHtml(m.name)}</td>
       <td style="padding:10px; color:var(--text-muted); font-size:0.85rem;">${escapeHtml(m.email)}</td>
-      <td class="col-center" style="padding:10px;"><span class="role-badge ${m.role}">${m.role === 'mentor' ? 'Mentor' : 'Anggota'}</span></td>
+      <td class="col-center" style="padding:10px;"><span class="role-badge ${m.role}">${m.role === 'mentor' ? 'Lead' : 'Member'}</span></td>
       <td class="col-divisi" style="padding:10px;">${escapeHtml(m.division || 'Umum')}</td>
       <td class="col-center" style="padding:10px;">
         <div style="display:inline-flex; flex-direction:row; gap:0.5rem; align-items:center; justify-content:center; flex-wrap:nowrap;">
@@ -919,7 +919,7 @@ function renderMembersGrid(members) {
           ${online ? '<span class="online-label">● Online</span>' : ''}
         </div>
         <div class="meta">
-          <span class="role-badge ${m.role}" style="font-size:0.62rem; padding:1px 6px;">${m.role === 'mentor' ? 'Mentor' : 'Anggota'}</span>
+          <span class="role-badge ${m.role}" style="font-size:0.62rem; padding:1px 6px;">${m.role === 'mentor' ? 'Lead' : 'Member'}</span>
           · ${escapeHtml(m.division || 'Umum')}
         </div>
         <div class="meta last-active">${online ? 'Aktif sekarang' : 'Terakhir aktif: ' + timeAgo(m.lastActive)}</div>
@@ -929,7 +929,7 @@ function renderMembersGrid(members) {
 }
 
 window.deleteDivision = async (divId) => {
-  if (!confirm('Hapus divisi ini? Anggota akan dipindahkan ke "Umum".')) return;
+  if (!confirm('Hapus divisi ini? Member akan dipindahkan ke "Umum".')) return;
   try {
     const batch = writeBatch(db);
     const div = state.divisions.find(d => d.id === divId);
@@ -1102,24 +1102,24 @@ async function addSubtaskFromModal() {
 }
 
 function renderTaskExtras(task) {
-  const isMentor = state.role === 'mentor', canEdit = canEditTask(task);
+  const isLead = state.role === 'mentor', canEdit = canEditTask(task);
   const subs = task.subtasks || [], p = subProgress(task);
-  $('detailSubtaskBox').classList.toggle('hidden', !subs.length && !isMentor);
+  $('detailSubtaskBox').classList.toggle('hidden', !subs.length && !isLead);
   $('detailProgressFill').style.width = (p ? p.pct : 0) + '%';
   $('detailProgressFill').classList.toggle('full', !!p && p.pct === 100);
   $('detailProgressText').textContent = p ? `${p.done}/${p.total} · ${p.pct}%` : '0%';
-  $('detailSubtaskAdd').classList.toggle('hidden', !isMentor);
+  $('detailSubtaskAdd').classList.toggle('hidden', !isLead);
   $('detailSubtaskList').innerHTML = subs.length ? subs.map(s => `
     <label class="subtask-item ${s.done ? 'done' : ''}">
       <input type="checkbox" ${s.done ? 'checked' : ''} ${canEdit ? '' : 'disabled'} onchange="toggleSubtask('${task.id}','${s.id}',this.checked)" />
       <span>${escapeHtml(s.text)}</span>
-      ${isMentor ? `<button type="button" class="icon-del" title="Hapus sub-tugas" onclick="event.preventDefault();deleteSubtask('${task.id}','${s.id}')">×</button>` : ''}
+      ${isLead ? `<button type="button" class="icon-del" title="Hapus sub-tugas" onclick="event.preventDefault();deleteSubtask('${task.id}','${s.id}')">×</button>` : ''}
     </label>`).join('') : '<p class="empty-hint">Belum ada sub-tugas.</p>';
 
   const files = task.attachments || [];
   $('attachUploader').classList.toggle('hidden', !canEdit);
   $('detailAttachList').innerHTML = files.length ? files.map(f => {
-    const href = safeUrl(f.url), canDel = isMentor || f.uid === state.user.uid;
+    const href = safeUrl(f.url), canDel = isLead || f.uid === state.user.uid;
     return `<div class="attach-item"><span>🔗</span>
       <div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div>
       ${canDel ? `<button type="button" class="icon-del" title="Hapus lampiran" onclick="deleteAttachment('${task.id}','${f.id}')">×</button>` : ''}
@@ -1182,20 +1182,20 @@ function renderCalendar() {
 /* ===== PENGUMUMAN ===== */
 function renderAnnouncements() {
   const el = $('announceList'); if (!el) return;
-  const isMentor = state.role === 'mentor';
+  const isLead = state.role === 'mentor';
   const list = [...announcements].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   el.innerHTML = list.length ? list.map(a => `
     <article class="announce-item ${a.pinned ? 'pinned' : ''}">
       <div class="announce-head">
         <h4>${a.pinned ? '📌 ' : ''}${escapeHtml(a.title)}</h4>
-        ${isMentor ? `<div class="announce-actions">
+        ${isLead ? `<div class="announce-actions">
           <button type="button" class="btn-sm btn-ghost" onclick="togglePinAnnouncement('${a.id}')">${a.pinned ? 'Lepas pin' : 'Sematkan'}</button>
           <button type="button" class="btn-sm btn-ghost" onclick="editAnnouncement('${a.id}')">Edit</button>
           <button type="button" class="btn-sm btn-warning" onclick="deleteAnnouncement('${a.id}')">Hapus</button>
         </div>` : ''}
       </div>
       <p>${escapeHtml(a.body)}</p>
-      <small>${escapeHtml(a.by || 'Mentor')} · ${fmtTime(a.createdAt)}</small>
+      <small>${escapeHtml(a.by || 'Lead')} · ${fmtTime(a.createdAt)}</small>
     </article>`).join('') : '<p class="empty-hint">Belum ada pengumuman dari mentor.</p>';
 }
 const annRef = (id) => doc(db, 'workspaces', state.workspaceId, 'announcements', id);
@@ -1251,6 +1251,14 @@ function setupEventListeners() {
   $('dashboardNavBtn').addEventListener('click', () => switchDashboardSection('home'));
   $('myWorkspacesNavBtn').addEventListener('click', () => switchDashboardSection('workspaces'));
   $('notificationsNavBtn').addEventListener('click', () => switchDashboardSection('notifications'));
+  const notifTop = $('notificationsNavBtnTop');
+  if (notifTop) notifTop.addEventListener('click', () => switchDashboardSection('notifications'));
+  const accTop = $('accountBtnTop');
+  if (accTop) accTop.addEventListener('click', () => {
+    $('accountName').value = state.user.displayName || state.user.email.split('@')[0];
+    $('accountPassword').value = '';
+    $('accountModal').classList.remove('hidden');
+  });
   $('createWorkspaceForm').addEventListener('submit', handleCreateWorkspace);
   $('joinWorkspaceForm').addEventListener('submit', handleJoinWorkspace);
   $('backToDashboardBtn').addEventListener('click', backToDashboard);
