@@ -77,7 +77,7 @@
       <nav class="sidebar-menu">
         <button id="dashboardNavBtn" class="menu-item active"><span class="menu-icon">▦</span> Dashboard</button>
         <button id="myWorkspacesNavBtn" class="menu-item"><span class="menu-icon">▣</span> Ruang Kerja Saya</button>
-        <button id="notificationsNavBtn" class="menu-item"><span class="menu-icon">♧</span> Notifikasi</button>
+        <button id="notificationsNavBtn" class="menu-item"><span class="menu-icon">♧</span> Notifikasi <span id="notifBadge" class="nav-badge hidden">0</span></button>
       </nav>
       <div class="sidebar-settings-section">
         <button id="accountBtn" class="menu-item menu-item-settings"><span class="menu-icon">⚙</span> Pengaturan Akun</button>
@@ -129,7 +129,8 @@
           <div class="card">
             <div class="section-header-title">
               <h3>Notifikasi</h3>
-              <p class="subtitle">Semua tugas yang perlu ditindaklanjuti maupun yang sudah selesai.</p>
+              <p class="subtitle">Pembaruan tugas, pengumuman, dan tenggat untuk Anda. Klik notifikasi untuk membukanya.</p>
+            <button id="markAllReadBtn" class="btn-secondary" style="margin-bottom:1rem;">Tandai semua dibaca</button>
             </div>
             <div id="dashboardNotificationsList" class="dashboard-notifications-list"><p class="empty-hint">Memuat notifikasi...</p></div>
           </div>
@@ -152,6 +153,9 @@
         <div class="ws-sidebar-section">
           <div class="ws-sidebar-label">Menu Ruang Kerja</div>
           <button id="tabTaskView" class="ws-nav-item active"><span>▦</span> <span id="tabTaskLabel">Tugas Saya</span></button>
+          <button id="tabCalendarView" class="ws-nav-item"><span>▤</span> Kalender Tenggat</button>
+          <button id="tabActivityView" class="ws-nav-item"><span>◷</span> Aktivitas</button>
+          <button id="tabAnnouncementView" class="ws-nav-item"><span>✦</span> Pengumuman</button>
           <button id="tabDivisionView" class="ws-nav-item hidden"><span>◎</span> Manajemen Divisi</button>
         </div>
         <div id="mentorPanel" class="ws-sidebar-section hidden">
@@ -216,6 +220,7 @@
                 <label for="taskDesc">Instruksi & Kriteria</label>
                 <textarea id="taskDesc" rows="3"></textarea>
               </div>
+              <div class="form-group"><label for="taskSubtasks">Sub-tugas (opsional, satu per baris)</label><textarea id="taskSubtasks" rows="3" placeholder="Riset referensi&#10;Buat draf pertama&#10;Revisi akhir"></textarea></div>
               <button type="submit" class="btn-primary">Bagikan Tugas</button>
             </form>
           </div>
@@ -233,6 +238,7 @@
           </div>
 
           <div class="card">
+            <div id="deadlineBanner" class="deadline-banner hidden"></div>
             <div class="task-toolbar">
               <input type="text" id="taskSearch" placeholder="🔍 Cari tugas..." />
               <select id="filterStatus">
@@ -267,6 +273,44 @@
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <div id="calendarPanel" class="hidden">
+          <div class="card">
+            <div class="cal-head">
+              <div class="section-header-title"><h3 id="calTitle">Kalender</h3><p class="subtitle">Tugas ditampilkan pada tanggal tenggatnya. Klik tugas untuk melihat detail.</p></div>
+              <div class="cal-nav">
+                <button type="button" id="calPrev" class="btn-secondary" aria-label="Bulan sebelumnya">‹</button>
+                <button type="button" id="calToday" class="btn-secondary">Hari ini</button>
+                <button type="button" id="calNext" class="btn-secondary" aria-label="Bulan berikutnya">›</button>
+              </div>
+            </div>
+            <div class="cal-grid cal-dow"><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span></div>
+            <div id="calGrid" class="cal-grid"></div>
+          </div>
+        </div>
+
+        <div id="activityPanel" class="hidden">
+          <div class="card">
+            <div class="section-header-title"><h3>Aktivitas Ruang Kerja</h3><p class="subtitle">Riwayat terbaru dari semua anggota, diperbarui otomatis.</p></div>
+            <div id="activityList"><p class="empty-hint">Belum ada aktivitas.</p></div>
+          </div>
+        </div>
+
+        <div id="announcementPanel" class="hidden">
+          <div id="announceCreator" class="card hidden">
+            <div class="section-header-title"><h3>Buat Pengumuman</h3><p class="subtitle">Pengumuman terlihat oleh semua anggota ruang kerja.</p></div>
+            <form id="announceForm">
+              <div class="form-group"><label for="announceTitle">Judul</label><input type="text" id="announceTitle" maxlength="120" required /></div>
+              <div class="form-group"><label for="announceBody">Isi pengumuman</label><textarea id="announceBody" rows="3" required></textarea></div>
+              <label class="remember-me" style="margin-bottom:1rem;"><input type="checkbox" id="announcePinned" /> Sematkan di bagian atas</label>
+              <button type="submit" class="btn-primary">Kirim Pengumuman</button>
+            </form>
+          </div>
+          <div class="card">
+            <div class="section-header-title"><h3>Papan Pengumuman</h3></div>
+            <div id="announceList"><p class="empty-hint">Belum ada pengumuman.</p></div>
           </div>
         </div>
 
@@ -331,6 +375,24 @@
       <div style="margin-bottom:1.5rem;">
         <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">Deskripsi & Instruksi</label>
         <p id="detailTaskDesc" style="margin-top:0.25rem; line-height:1.6; color:var(--text); white-space:pre-wrap;">-</p>
+      </div>
+      <div id="detailSubtaskBox" class="detail-section hidden">
+        <label class="detail-label">Sub-tugas</label>
+        <div class="progress-row"><div class="progress-track"><div id="detailProgressFill" class="progress-fill"></div></div><span id="detailProgressText">0%</span></div>
+        <div id="detailSubtaskList"></div>
+        <div id="detailSubtaskAdd" class="input-with-btn hidden" style="margin-top:0.6rem;">
+          <input type="text" id="subtaskInput" placeholder="Tambah sub-tugas..." maxlength="120" />
+          <button type="button" id="addSubtaskBtn" class="btn-secondary">Tambah</button>
+        </div>
+      </div>
+      <div id="detailAttachBox" class="detail-section">
+        <label class="detail-label">Lampiran</label>
+        <div id="detailAttachList"></div>
+        <div id="attachUploader" class="hidden" style="margin-top:0.6rem;">
+          <label for="attachInput" class="btn-secondary attach-pick">📎 Unggah file (maks 10 MB)</label>
+          <input type="file" id="attachInput" class="visually-hidden" />
+          <div id="attachProgress" class="progress-row hidden"><div class="progress-track"><div id="attachProgressFill" class="progress-fill"></div></div><span id="attachProgressText">0%</span></div>
+        </div>
       </div>
       <div id="detailRevisionBox" class="review-report-box hidden" style="margin-bottom:1.5rem;">
         <strong>⚠️ Catatan Revisi dari Mentor:</strong>
