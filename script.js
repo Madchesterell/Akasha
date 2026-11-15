@@ -18,6 +18,7 @@ const firebaseConfig = {
   appId: "1:617778820449:web:8f239651dda6dfd0f8c120",
   measurementId: "G-YZGE0SBE5V"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
@@ -30,7 +31,6 @@ let unsubscribers = [];
 let dashboardWorkspaces = [];
 let dashboardNotifications = [];
 let heartbeatInterval = null;
-
 const $ = (id) => document.getElementById(id);
 
 /* ===== UTIL ===== */
@@ -39,33 +39,40 @@ function escapeHtml(str) {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 }
+
 function safeUrl(u) {
   try {
     const url = new URL(String(u || '').trim());
     return (url.protocol === 'https:' || url.protocol === 'http:') ? url.href : '';
   } catch { return ''; }
 }
+
 function localDate(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+
 function dueDiff(t) {
   if (!t.endDate) return null;
   return (new Date(t.endDate + 'T23:59:59') - new Date()) / 864e5;
 }
+
 function daysLeft(t) {
   if (!t.endDate) return null;
   return Math.round((new Date(t.endDate + 'T00:00:00') - new Date(localDate() + 'T00:00:00')) / 864e5);
 }
+
 function dueLevel(t) {
   if (t.status === 'done') return null;
   const d = daysLeft(t);
   return d === null ? null : d < 0 ? 'overdue' : d <= 1 ? 'urgent' : d <= 3 ? 'soon' : null;
 }
+
 function dueLabel(t) {
   const d = daysLeft(t);
   return d < 0 ? `Terlambat ${-d} hari` : d === 0 ? 'Hari ini' : d === 1 ? 'Besok' : `H-${d}`;
 }
+
 const needsAction = (t, role, name) => role === 'mentor'
   ? t.status === 'review'
   : t.assignee === name && (t.status === 'todo' || (t.status === 'progress' && t.revisionNotes));
@@ -96,10 +103,11 @@ function timeAgo(ts) {
   if (diff < 86400) return `${Math.floor(diff / 3600)} jam lalu`;
   return `${Math.floor(diff / 86400)} hari lalu`;
 }
+
 function isOnline(lastActive) {
   if (!lastActive) return false;
   const t = lastActive?.toDate ? lastActive.toDate() : new Date(lastActive);
-  return (Date.now() - t.getTime()) < 2 * 60 * 1000; // 2 menit
+  return (Date.now() - t.getTime()) < 2 * 60 * 1000;
 }
 
 /* ===== DARK MODE ===== */
@@ -116,7 +124,7 @@ function initDarkMode() {
   }
 }
 
-/* ===== HEARTBEAT (lastActive tiap 60 detik) ===== */
+/* ===== HEARTBEAT ===== */
 function startHeartbeat() {
   stopHeartbeat();
   const beat = async () => {
@@ -129,6 +137,7 @@ function startHeartbeat() {
   beat();
   heartbeatInterval = setInterval(beat, 60000);
 }
+
 function stopHeartbeat() {
   if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; }
 }
@@ -139,6 +148,7 @@ function showAuthView() {
   $('dashboardView').classList.add('hidden');
   $('workspaceView').classList.add('hidden');
 }
+
 function showDashboardView() {
   $('authView').classList.add('hidden');
   $('dashboardView').classList.remove('hidden');
@@ -151,6 +161,7 @@ function showDashboardView() {
   loadUserWorkspaces();
   switchDashboardSection('home');
 }
+
 function switchDashboardSection(section) {
   const panels = { home: 'dashboardHomePanel', workspaces: 'myWorkspacesPanel', notifications: 'notificationsPanel' };
   Object.entries(panels).forEach(([key, id]) => $(id)?.classList.toggle('hidden', key !== section));
@@ -186,6 +197,7 @@ const WS_TABS = {
   division: ['divisionManagementPanel', 'tabDivisionView'],
   team: ['teamPanel', 'tabTeamView']
 };
+
 function switchWorkspaceTab(tabName) {
   Object.entries(WS_TABS).forEach(([k, [panel, btn]]) => {
     $(panel)?.classList.toggle('hidden', k !== tabName);
@@ -209,6 +221,7 @@ function toggleAuthMode() {
     $('authSubtitle').textContent = 'Masuk untuk mengakses dashboard Anda.';
   }
 }
+
 async function handleLogin(e) {
   e.preventDefault();
   const email = $('loginEmail').value.trim();
@@ -221,6 +234,7 @@ async function handleLogin(e) {
   } catch (err) { alert('Gagal masuk: ' + (err.code || err.message)); }
   finally { btn.disabled = false; btn.textContent = 'Masuk'; }
 }
+
 async function handleRegister(e) {
   e.preventDefault();
   const name = $('registerName').value.trim();
@@ -237,6 +251,7 @@ async function handleRegister(e) {
   } catch (err) { alert('Gagal daftar: ' + (err.code || err.message)); }
   finally { btn.disabled = false; btn.textContent = 'Daftar'; }
 }
+
 async function handleLogout() {
   if (!confirm('Keluar dari akun?')) return;
   stopHeartbeat();
@@ -315,22 +330,13 @@ function renderDashboardNotifications() {
     if (task.status === 'done') dashboardNotifications.push({ ...task, workspaceId: ws.id, workspaceName: ws.name, kind: 'done', role: ws.role });
   }));
   dashboardNotifications.sort((a, b) => (a.kind === b.kind ? String(b.endDate || '').localeCompare(String(a.endDate || '')) : a.kind === 'action' ? -1 : 1));
-
   const list = $('dashboardNotificationsList');
   if (!list) return;
   if (!dashboardNotifications.length) {
     list.innerHTML = '<p class="empty-hint">Belum ada notifikasi. Aktivitas tugas akan muncul di sini.</p>';
     return;
   }
-  list.innerHTML = dashboardNotifications.slice(0, 8).map(item => `
-    <article class="dashboard-notification-item" onclick="openWorkspace('${item.workspaceId}')">
-      <span class="notification-status-dot ${item.kind === 'done' ? 'is-done' : 'is-action'}"></span>
-      <div class="dashboard-notification-copy">
-        <strong>${escapeHtml(item.title || 'Tugas tanpa judul')}</strong>
-        <p>${escapeHtml(item.workspaceName)} · ${item.kind === 'done' ? 'Tugas selesai' : (item.role === 'mentor' ? 'Menunggu penilaian' : 'Perlu tindakan')}</p>
-      </div>
-      <span class="notification-kind ${item.kind}">${item.kind === 'done' ? 'Selesai' : 'Perlu tindakan'}</span>
-    </article>`).join('');
+  list.innerHTML = dashboardNotifications.slice(0, 8).map(item => `<article class="dashboard-notification-item" onclick="openWorkspace('${item.workspaceId}')"> <span class="notification-status-dot ${item.kind === 'done' ? 'is-done' : 'is-action'}"></span> <div class="dashboard-notification-copy"> <strong>${escapeHtml(item.title || 'Tugas tanpa judul')}</strong> <p>${escapeHtml(item.workspaceName)} · ${item.kind === 'done' ? 'Tugas selesai' : (item.role === 'mentor' ? 'Menunggu penilaian' : 'Perlu tindakan')}</p> </div> <span class="notification-kind ${item.kind}">${item.kind === 'done' ? 'Selesai' : 'Perlu tindakan'}</span> </article>`).join('');
 }
 
 function renderFullNotifications() {
@@ -340,18 +346,10 @@ function renderFullNotifications() {
     list.innerHTML = '<p class="empty-hint">Belum ada notifikasi.</p>';
     return;
   }
-  list.innerHTML = dashboardNotifications.map(item => `
-    <article class="dashboard-notification-item" onclick="openWorkspace('${item.workspaceId}')">
-      <span class="notification-status-dot ${item.kind === 'done' ? 'is-done' : 'is-action'}"></span>
-      <div class="dashboard-notification-copy">
-        <strong>${escapeHtml(item.title || 'Tugas tanpa judul')}</strong>
-        <p>${escapeHtml(item.workspaceName)} · ${item.kind === 'done' ? 'Tugas selesai' : (item.role === 'mentor' ? 'Menunggu penilaian' : 'Perlu tindakan')}</p>
-      </div>
-      <span class="notification-kind ${item.kind}">${item.kind === 'done' ? 'Selesai' : 'Perlu tindakan'}</span>
-    </article>`).join('');
+  list.innerHTML = dashboardNotifications.map(item => `<article class="dashboard-notification-item" onclick="openWorkspace('${item.workspaceId}')"> <span class="notification-status-dot ${item.kind === 'done' ? 'is-done' : 'is-action'}"></span> <div class="dashboard-notification-copy"> <strong>${escapeHtml(item.title || 'Tugas tanpa judul')}</strong> <p>${escapeHtml(item.workspaceName)} · ${item.kind === 'done' ? 'Tugas selesai' : (item.role === 'mentor' ? 'Menunggu penilaian' : 'Perlu tindakan')}</p> </div> <span class="notification-kind ${item.kind}">${item.kind === 'done' ? 'Selesai' : 'Perlu tindakan'}</span> </article>`).join('');
 }
 
-/* ===== MINI CALENDAR WIDGET (7 hari ke depan) ===== */
+/* ===== MINI CALENDAR ===== */
 function renderMiniCalendar() {
   const el = $('miniCalendarList');
   if (!el) return;
@@ -376,14 +374,7 @@ function renderMiniCalendar() {
   const months = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
   el.innerHTML = items.slice(0, 8).map(({ t, ws, date }) => {
     const lv = dueLevel(t);
-    return `<div class="mini-cal-item ${lv ? 'due-' + lv : ''}" onclick="openWorkspace('${ws.id}')">
-      <div class="mini-cal-date"><span class="day">${date.getDate()}</span><span class="mon">${months[date.getMonth()]}</span></div>
-      <div class="mini-cal-info">
-        <strong>${escapeHtml(t.title)}</strong>
-        <small>${escapeHtml(ws.name)} · ${escapeHtml(t.assignee)}</small>
-      </div>
-      ${lv ? `<span class="due-badge due-${lv}">${dueLabel(t)}</span>` : ''}
-    </div>`;
+    return `<div class="mini-cal-item ${lv ? 'due-' + lv : ''}" onclick="openWorkspace('${ws.id}')"> <div class="mini-cal-date"><span class="day">${date.getDate()}</span><span class="mon">${months[date.getMonth()]}</span></div> <div class="mini-cal-info"> <strong>${escapeHtml(t.title)}</strong> <small>${escapeHtml(ws.name)} · ${escapeHtml(t.assignee)}</small> </div> ${lv ? `<span class="due-badge due-${lv}">${dueLabel(t)}</span>` : ''} </div>`;
   }).join('');
 }
 
@@ -398,12 +389,7 @@ function renderDashboardSummary() {
     action += s.action;
     overdue += (s.c.overdue || 0);
   });
-  el.innerHTML = `
-    <div class="summary-item"><div class="num">${total}</div><div class="lbl">Total Tugas</div></div>
-    <div class="summary-item"><div class="num" style="color:var(--success);">${done}</div><div class="lbl">Selesai</div></div>
-    <div class="summary-item"><div class="num" style="color:var(--warning);">${action}</div><div class="lbl">Perlu Tindakan</div></div>
-    <div class="summary-item"><div class="num" style="color:var(--danger);">${overdue}</div><div class="lbl">Terlambat</div></div>
-  `;
+  el.innerHTML = `<div class="summary-item"><div class="num">${total}</div><div class="lbl">Total Tugas</div></div> <div class="summary-item"><div class="num" style="color:var(--success);">${done}</div><div class="lbl">Selesai</div></div> <div class="summary-item"><div class="num" style="color:var(--warning);">${action}</div><div class="lbl">Perlu Tindakan</div></div> <div class="summary-item"><div class="num" style="color:var(--danger);">${overdue}</div><div class="lbl">Terlambat</div></div>`;
 }
 
 /* ===== WORKSPACE ===== */
@@ -533,7 +519,7 @@ function subscribeToWorkspace() {
     afterTasksUpdate();
     renderTasks();
   }));
-  unsubscribers.push(onSnapshot(query(collection(db, 'workspaces', state.workspaceId, 'activities'), orderBy('at', 'desc'), limit(100)), (snap) => {
+  unsubscribers.push(onSnapshot(query(collection(db, 'workspaces', state.workspaceId, 'activities'), orderBy('createdAt', 'desc'), limit(100)), (snap) => {
     activities = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderActivities();
   }, err => console.warn('Aktivitas gagal dimuat:', err)));
@@ -549,7 +535,7 @@ function subscribeToWorkspace() {
   }));
 }
 
-/* ===== TARGET PENUGASAN (3 opsi: Semua / Divisi / Individu) ===== */
+/* ===== TARGET PENUGASAN ===== */
 function updateAssigneeSelect() {
   const select = $('taskAssignee');
   if (!select) return;
@@ -625,6 +611,7 @@ const subProgress = (t) => {
   const d = s.filter(x => x.done).length;
   return { done: d, total: s.length, pct: Math.round(d / s.length * 100) };
 };
+
 const progressBar = (p) => `<div class="progress-row"><div class="progress-track"><div class="progress-fill ${p.pct === 100 ? 'full' : ''}" style="width:${p.pct}%"></div></div><span>${p.pct}%</span></div>`;
 
 function renderTasks() {
@@ -642,15 +629,7 @@ function renderTasks() {
     const isOverdue = task.endDate && new Date(task.endDate + 'T23:59:59') < new Date() && task.status !== 'done';
     const [statusText, statusClass] = statusInfo(task);
     const shortDesc = task.desc ? (task.desc.length > 60 ? task.desc.substring(0, 60) + '...' : task.desc) : '-';
-    return `
-      <tr class="${lv ? 'row-due-' + lv : ''}" onclick="openTaskDetailModal('${task.id}')">
-        <td><div style="font-weight:600; font-size:0.9rem;">${escapeHtml(task.title)}${(task.attachments || []).length ? ` <span class="clip-count" title="Lampiran">📎${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td>
-        <td class="task-desc-cell"><div class="task-desc" title="${escapeHtml(task.desc || '')}">${escapeHtml(shortDesc)}</div></td>
-        <td style="font-size:0.85rem; color:#4b5563;">${escapeHtml(task.assignee)}</td>
-        <td class="col-center"><span class="stat-pill diff-${(task.difficulty || 'sedang').toLowerCase()}">${(task.difficulty || 'Sedang').charAt(0).toUpperCase() + (task.difficulty || 'sedang').slice(1)}</span></td>
-        <td class="col-center"><span class="stat-pill ${statusClass}">${statusText}${isOverdue ? ' (Terlambat)' : ''}</span></td>
-        <td style="font-size:0.85rem; color:${isOverdue ? '#dc2626' : '#4b5563'}; font-weight:${isOverdue ? '600' : '400'};">${escapeHtml(task.endDate || '-')}${lv ? ` <span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''}</td>
-      </tr>`;
+    return `<tr class="${lv ? 'row-due-' + lv : ''}" onclick="openTaskDetailModal('${task.id}')"> <td><div style="font-weight:600; font-size:0.9rem;">${escapeHtml(task.title)}${(task.attachments || []).length ? `<span class="clip-count" title="Lampiran">📎${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td> <td class="task-desc-cell"><div class="task-desc" title="${escapeHtml(task.desc || '')}">${escapeHtml(shortDesc)}</div></td> <td style="font-size:0.85rem; color:#4b5563;">${escapeHtml(task.assignee)}</td> <td class="col-center"><span class="stat-pill diff-${(task.difficulty || 'sedang').toLowerCase()}">${(task.difficulty || 'Sedang').charAt(0).toUpperCase() + (task.difficulty || 'sedang').slice(1)}</span></td> <td class="col-center"><span class="stat-pill ${statusClass}">${statusText}${isOverdue ? ' (Terlambat)' : ''}</span></td> <td style="font-size:0.85rem; color:${isOverdue ? '#dc2626' : '#4b5563'}; font-weight:${isOverdue ? '600' : '400'};">${escapeHtml(task.endDate || '-')}${lv ? `<span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''}</td> </tr>`;
   }).join('');
 }
 
@@ -664,7 +643,7 @@ function renderDeadlineBanner(tasks) {
   el.textContent = [o ? `${o} tugas melewati tenggat` : '', u ? `${u} tugas mendekati tenggat (3 hari ke depan)` : ''].filter(Boolean).join(' dan ');
 }
 
-/* ===== MODAL DETAIL TUGAS ===== */
+/* ===== MODAL DETAIL ===== */
 let currentDetailId = null;
 const autoStarted = new Set();
 const taskRef = (id) => doc(db, 'workspaces', state.workspaceId, 'tasks', id);
@@ -675,7 +654,7 @@ window.openTaskDetailModal = (taskId) => {
   $('detailTaskTitle').textContent = task.title;
   $('detailTaskAssignee').textContent = task.assignee;
   const lv = dueLevel(task);
-  $('detailTaskDates').innerHTML = `📅 ${escapeHtml(task.startDate || '?')} s/d ${escapeHtml(task.endDate || '?')}` + (lv ? ` <span class="due-badge due-${lv}">${dueLabel(task)}</span>` : '');
+  $('detailTaskDates').innerHTML = `📅 ${escapeHtml(task.startDate || '?')} s/d ${escapeHtml(task.endDate || '?')}` + (lv ? `<span class="due-badge due-${lv}">${dueLabel(task)}</span>` : '');
   $('detailTaskDesc').textContent = task.desc || 'Tidak ada deskripsi tambahan.';
   const [statusText, statusClass] = statusInfo(task);
   $('detailTaskStatus').className = `stat-pill ${statusClass}`;
@@ -698,16 +677,10 @@ window.openTaskDetailModal = (taskId) => {
   const history = task.history || [];
   if (history.length > 0) {
     const label = { laporan: '📤 Laporan', revisi: '↩ Revisi', selesai: '✅ Divalidasi' };
-    histList.innerHTML = [...history].sort((a, b) => b.at - a.at).map(h => `
-      <div class="hist-item hist-${escapeHtml(h.type)}">
-        <div class="hist-head"><strong>${label[h.type] || h.type}</strong> · ${escapeHtml(h.by || '')} <span>${new Date(h.at).toLocaleString('id-ID')}</span></div>
-        ${h.text ? `<div style="margin-top:4px;">${escapeHtml(h.text)}</div>` : ''}
-      </div>`).join('');
+    histList.innerHTML = [...history].sort((a, b) => b.at - a.at).map(h => `<div class="hist-item hist-${escapeHtml(h.type)}"> <div class="hist-head"><strong>${label[h.type] || h.type}</strong> · ${escapeHtml(h.by || '')} <span>${new Date(h.at).toLocaleString('id-ID')}</span></div> ${h.text ? `<div style="margin-top:4px;">${escapeHtml(h.text)}</div>` : ''} </div>`).join('');
   } else {
     histList.innerHTML = '<p class="empty-hint">Belum ada riwayat.</p>';
   }
-
-  // AUTO-START: pekerja buka detail → status todo → progress
   const isWorker = state.role === 'worker' && task.assignee === state.workerName;
   const isLead = state.role === 'mentor';
   if (isWorker && task.status === 'todo' && !autoStarted.has(task.id)) {
@@ -718,39 +691,22 @@ window.openTaskDetailModal = (taskId) => {
       toast('▶ Tugas dimulai', 'info');
     }).catch(() => autoStarted.delete(task.id));
   }
-
-  // Form laporan: hanya tampil jika pekerja + status todo/progress
   $('detailReportBox').classList.toggle('hidden', !(isWorker && ['todo', 'progress'].includes(task.status)));
-  // Form review: hanya tampil jika mentor + status review
   $('detailReviewBox').classList.toggle('hidden', !(isLead && task.status === 'review'));
-
-  // Reset form values
   $('reportLink').value = task.reportFileLink || '';
   $('reportNotes').value = '';
   $('reviewNotes').value = '';
   $('reportError').classList.add('hidden');
   $('reviewError').classList.add('hidden');
-
-  // Tombol aksi
   const actionContainer = $('detailActionButtons');
   actionContainer.innerHTML = '';
   if (isWorker && ['todo', 'progress'].includes(task.status)) {
     actionContainer.innerHTML = `<button class="btn-sm" onclick="submitReport()">📤 Kirim Laporan</button>`;
   } else if (isLead && task.status === 'review') {
-    actionContainer.innerHTML = `
-      <div class="action-group">
-        <button class="btn-sm btn-warning" onclick="submitReview(true)">↩ Revisi</button>
-        <button class="btn-sm btn-success" onclick="submitReview(false)">✅ Selesai</button>
-      </div>`;
+    actionContainer.innerHTML = `<div class="action-group"> <button class="btn-sm btn-warning" onclick="submitReview(true)">↩ Revisi</button> <button class="btn-sm btn-success" onclick="submitReview(false)">✅ Selesai</button> </div>`;
   } else if (isLead) {
-    // Selesai = final. Hanya Edit & Hapus.
-    actionContainer.innerHTML = `
-      <div class="action-group">
-        <button class="btn-sm btn-ghost" onclick="window.openEditTaskModal('${task.id}'); window.closeTaskDetailModal()">✏️ Edit</button>
-        <button class="btn-sm btn-warning" onclick="window.deleteTask('${task.id}'); window.closeTaskDetailModal()">🗑 Hapus</button>
-      </div>`;
+    actionContainer.innerHTML = `<div class="action-group"> <button class="btn-sm btn-ghost" onclick="window.openEditTaskModal('${task.id}'); window.closeTaskDetailModal()">✏️ Edit</button> <button class="btn-sm btn-warning" onclick="window.deleteTask('${task.id}'); window.closeTaskDetailModal()">🗑 Hapus</button> </div>`;
   }
-
   currentDetailId = task.id;
   renderTaskExtras(task);
   $('taskDetailModal').classList.remove('hidden');
@@ -761,7 +717,6 @@ window.closeTaskDetailModal = () => {
   currentDetailId = null;
 };
 
-/* ===== SUBMIT LAPORAN (form di dalam modal) ===== */
 window.submitReport = async () => {
   const t = state.tasks.find(x => x.id === currentDetailId);
   if (!t || !(state.role === 'worker' && t.assignee === state.workerName)) return;
@@ -792,7 +747,6 @@ window.submitReport = async () => {
   }
 };
 
-/* ===== SUBMIT REVIEW (form di dalam modal) ===== */
 window.submitReview = async (isRevision) => {
   const t = state.tasks.find(x => x.id === currentDetailId);
   if (!t || state.role !== 'mentor' || t.status !== 'review') return;
@@ -852,6 +806,7 @@ function loadDailyGoal() {
   if (!display) return;
   display.textContent = (me && me.goalDate === today && me.dailyGoal) ? `🎯 ${me.dailyGoal}` : '';
 }
+
 function setDefaultDates() {
   const startEl = $('startDate');
   const endEl = $('endDate');
@@ -866,37 +821,17 @@ function renderDivisionManagement() {
     divListContainer.innerHTML = state.divisions.length === 0 ? '<p class="empty-hint">Belum ada divisi terdaftar.</p>' :
       state.divisions.map(d => {
         const countEmp = state.members.filter(m => m.division === d.name).length;
-        return `<div style="border:1px solid var(--border); padding:12px; border-radius:8px; margin-bottom:10px; background:var(--surface); display:flex; justify-content:space-between; align-items:center;">
-          <div><h4 style="margin:0; font-size:1rem;">${escapeHtml(d.name)}</h4><p style="margin:4px 0 0; font-size:0.8rem; color:var(--text-muted);">${escapeHtml(d.desc || 'Tidak ada deskripsi.')}</p></div>
-          <div style="display:flex; align-items:center; gap:12px;">
-            <span style="background:var(--primary-soft); color:var(--primary); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">${countEmp} Member</span>
-            <button class="btn-sm btn-warning" onclick="deleteDivision('${d.id}')" style="font-size:0.7rem;">Hapus</button>
-          </div>
-        </div>`;
+        return `<div style="border:1px solid var(--border); padding:12px; border-radius:8px; margin-bottom:10px; background:var(--surface); display:flex; justify-content:space-between; align-items:center;"> <div><h4 style="margin:0; font-size:1rem;">${escapeHtml(d.name)}</h4><p style="margin:4px 0 0; font-size:0.8rem; color:var(--text-muted);">${escapeHtml(d.desc || 'Tidak ada deskripsi.')}</p></div> <div style="display:flex; align-items:center; gap:12px;"> <span style="background:var(--accent-soft); color:var(--accent); padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:600;">${countEmp} Member</span> <button class="btn-sm btn-warning" onclick="deleteDivision('${d.id}')" style="font-size:0.7rem;">Hapus</button> </div> </div>`;
       }).join('');
   }
-  // Presence list (mentor)
   const presenceList = $('memberPresenceList');
   if (presenceList) presenceList.innerHTML = renderMembersGrid(state.members);
-
   const tableBody = $('memberSettingsTableBody');
   if (tableBody) {
-    tableBody.innerHTML = state.members.map(m => `<tr>
-      <td style="padding:10px; font-weight:500;">${escapeHtml(m.name)}</td>
-      <td style="padding:10px; color:var(--text-muted); font-size:0.85rem;">${escapeHtml(m.email)}</td>
-      <td class="col-center" style="padding:10px;"><span class="role-badge ${m.role}">${m.role === 'mentor' ? 'Lead' : 'Member'}</span></td>
-      <td class="col-divisi" style="padding:10px;">${escapeHtml(m.division || 'Umum')}</td>
-      <td class="col-center" style="padding:10px;">
-        <div style="display:inline-flex; flex-direction:row; gap:0.5rem; align-items:center; justify-content:center; flex-wrap:nowrap;">
-          <button class="btn-sm" onclick="openEditMemberModal('${m.id}')">Edit</button>
-          ${m.id !== state.user.uid ? `<button class="btn-sm btn-warning" onclick="removeMember('${m.id}')">Keluarkan</button>` : ''}
-        </div>
-      </td>
-    </tr>`).join('');
+    tableBody.innerHTML = state.members.map(m => `<tr> <td style="padding:10px; font-weight:500;">${escapeHtml(m.name)}</td> <td style="padding:10px; color:var(--text-muted); font-size:0.85rem;">${escapeHtml(m.email)}</td> <td class="col-center" style="padding:10px;"><span class="role-badge ${m.role}">${m.role === 'mentor' ? 'Lead' : 'Member'}</span></td> <td class="col-divisi" style="padding:10px;">${escapeHtml(m.division || 'Umum')}</td> <td class="col-center" style="padding:10px;"> <div style="display:inline-flex; flex-direction:row; gap:0.5rem; align-items:center; justify-content:center; flex-wrap:nowrap;"> <button class="btn-sm" onclick="openEditMemberModal('${m.id}')">Edit</button> ${m.id !== state.user.uid ? `<button class="btn-sm btn-warning" onclick="removeMember('${m.id}')">Keluarkan</button>` : ''} </div> </td> </tr>`).join('');
   }
 }
 
-/* ===== TEAM PANEL (BARU - untuk semua anggota) ===== */
 function renderTeamPanel() {
   const el = $('teamMembersList');
   if (!el) return;
@@ -908,23 +843,7 @@ function renderMembersGrid(members) {
   return members.map(m => {
     const initials = (m.name || '?').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('');
     const online = isOnline(m.lastActive);
-    return `<div class="team-member-card">
-      <div class="team-avatar">
-        ${initials}
-        <span class="presence-dot ${online ? 'online' : ''}"></span>
-      </div>
-      <div class="team-info">
-        <div class="name-row">
-          <span class="name">${escapeHtml(m.name)}</span>
-          ${online ? '<span class="online-label">● Online</span>' : ''}
-        </div>
-        <div class="meta">
-          <span class="role-badge ${m.role}" style="font-size:0.62rem; padding:1px 6px;">${m.role === 'mentor' ? 'Lead' : 'Member'}</span>
-          · ${escapeHtml(m.division || 'Umum')}
-        </div>
-        <div class="meta last-active">${online ? 'Aktif sekarang' : 'Terakhir aktif: ' + timeAgo(m.lastActive)}</div>
-      </div>
-    </div>`;
+    return `<div class="team-member-card"> <div class="team-avatar"> ${initials} <span class="presence-dot ${online ? 'online' : ''}"></span> </div> <div class="team-info"> <div class="name-row"> <span class="name">${escapeHtml(m.name)}</span> ${online ? '<span class="online-label">● Online</span>' : ''} </div> <div class="meta"> <span class="role-badge ${m.role}" style="font-size:0.62rem; padding:1px 6px;">${m.role === 'mentor' ? 'Lead' : 'Member'}</span> · ${escapeHtml(m.division || 'Umum')} </div> <div class="meta last-active">${online ? 'Aktif sekarang' : 'Terakhir aktif: ' + timeAgo(m.lastActive)}</div> </div> </div>`;
   }).join('');
 }
 
@@ -940,6 +859,7 @@ window.deleteDivision = async (divId) => {
     await batch.commit();
   } catch (err) { alert('Gagal: ' + err.message); }
 };
+
 window.openEditMemberModal = (memberId) => {
   const mem = state.members.find(m => m.id === memberId);
   if (!mem) return;
@@ -949,6 +869,7 @@ window.openEditMemberModal = (memberId) => {
   $('editMemberDivision').value = mem.division || 'Umum';
   $('editMemberModal').classList.remove('hidden');
 };
+
 window.removeMember = async (memberId) => {
   const m = state.members.find(x => x.id === memberId);
   if (!m || memberId === state.user.uid || !confirm(`Keluarkan ${m.name}?`)) return;
@@ -967,6 +888,7 @@ async function leaveWorkspace() {
     backToDashboard();
   } catch (err) { alert('Gagal: ' + err.message); }
 }
+
 async function changeJoinCode() {
   const input = prompt('Kode undangan baru (6 huruf/angka). Kosongkan untuk acak:');
   if (input === null) return;
@@ -979,6 +901,7 @@ async function changeJoinCode() {
     alert('✅ Kode diganti menjadi ' + code);
   } catch (err) { alert('Gagal: ' + err.message); }
 }
+
 async function deleteWorkspace() {
   const typed = prompt(`Hapus ruang kerja? Ketik "${state.workspaceName}" untuk konfirmasi:`);
   if (typed !== state.workspaceName) return alert('Nama tidak cocok.');
@@ -998,6 +921,7 @@ async function deleteWorkspace() {
     backToDashboard();
   } catch (err) { alert('Gagal: ' + err.message); }
 }
+
 async function renameUser(newName, oldName) {
   await updateProfile(auth.currentUser, { displayName: newName });
   const userSnap = await getDoc(doc(db, 'users', state.user.uid));
@@ -1019,22 +943,20 @@ async function renameUser(newName, oldName) {
 /* ===== AKTIVITAS ===== */
 let activities = [], announcements = [];
 const ACT_ICON = { task: '🆕', start: '▶', report: '📤', revision: '↩', done: '✅', reopen: '🔄', delete: '🗑', file: '📎', join: '👋', announce: '📢', subtask: '☑' };
+
 function logActivity(type, text, taskId = null) {
   if (!state.workspaceId) return;
   addDoc(collection(db, 'workspaces', state.workspaceId, 'activities'), {
     type, text, taskId, by: state.workerName || '', uid: state.user.uid, at: serverTimestamp()
   }).catch(e => console.warn('Aktivitas gagal dicatat:', e));
 }
+
 function renderActivities() {
   const el = $('activityList'); if (!el) return;
-  el.innerHTML = activities.length ? activities.map(a => `
-    <div class="act-item act-${escapeHtml(a.type)}">
-      <span class="act-icon">${ACT_ICON[a.type] || '•'}</span>
-      <div><div>${escapeHtml(a.text)}</div><span class="act-time">${fmtTime(a.at)}</span></div>
-    </div>`).join('') : '<p class="empty-hint">Belum ada aktivitas.</p>';
+  el.innerHTML = activities.length ? activities.map(a => `<div class="act-item act-${escapeHtml(a.type)}"> <span class="act-icon">${ACT_ICON[a.type] || '•'}</span> <div><div>${escapeHtml(a.text)}</div><span class="act-time">${fmtTime(a.at)}</span></div> </div>`).join('') : '<p class="empty-hint">Belum ada aktivitas.</p>';
 }
 
-/* ===== NOTIFIKASI REAL-TIME ===== */
+/* ===== NOTIFIKASI ===== */
 let notifications = [], notifUnsub = null;
 const NOTIF_ICON = { task: '🆕', report: '📤', revision: '↩', done: '✅', announce: '📢', file: '📎', due: '⏰', start: '▶' };
 const fmtTime = (ts) => {
@@ -1051,6 +973,7 @@ function notify(uids, data) {
     }).catch(e => console.warn('Notifikasi gagal dikirim:', e));
   });
 }
+
 function startNotifications() {
   stopNotifications();
   notifUnsub = onSnapshot(query(collection(db, 'users', state.user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(60)), (snap) => {
@@ -1058,15 +981,18 @@ function startNotifications() {
     renderNotifBadge();
   }, err => console.warn('Notifikasi gagal dimuat:', err));
 }
+
 function stopNotifications() {
   if (notifUnsub) { notifUnsub(); notifUnsub = null; }
   notifications = [];
 }
+
 function renderNotifBadge() {
   const unread = notifications.filter(n => !n.read).length;
   const badge = $('notifBadge');
   if (badge) { badge.textContent = unread > 99 ? '99+' : unread; badge.classList.toggle('hidden', !unread); }
 }
+
 async function markAllRead() {
   const un = notifications.filter(n => !n.read); if (!un.length) return;
   const b = writeBatch(db);
@@ -1088,11 +1014,13 @@ window.toggleSubtask = async (taskId, subId, checked) => {
     if (checked && subtasks.every(s => s.done) && before.pct < 100) logActivity('subtask', `${state.workerName} menyelesaikan semua sub-tugas "${t.title}"`, taskId);
   } catch (err) { alert('Gagal: ' + err.message); }
 };
+
 window.deleteSubtask = async (taskId, subId) => {
   const t = state.tasks.find(x => x.id === taskId); if (!t || state.role !== 'mentor') return;
   try { await updateDoc(taskRef(taskId), { subtasks: (t.subtasks || []).filter(s => s.id !== subId), updatedAt: serverTimestamp() }); }
   catch (err) { alert('Gagal: ' + err.message); }
 };
+
 async function addSubtaskFromModal() {
   const t = state.tasks.find(x => x.id === currentDetailId); const input = $('subtaskInput');
   const text = input.value.trim(); if (!t || !text || state.role !== 'mentor') return;
@@ -1109,21 +1037,12 @@ function renderTaskExtras(task) {
   $('detailProgressFill').classList.toggle('full', !!p && p.pct === 100);
   $('detailProgressText').textContent = p ? `${p.done}/${p.total} · ${p.pct}%` : '0%';
   $('detailSubtaskAdd').classList.toggle('hidden', !isLead);
-  $('detailSubtaskList').innerHTML = subs.length ? subs.map(s => `
-    <label class="subtask-item ${s.done ? 'done' : ''}">
-      <input type="checkbox" ${s.done ? 'checked' : ''} ${canEdit ? '' : 'disabled'} onchange="toggleSubtask('${task.id}','${s.id}',this.checked)" />
-      <span>${escapeHtml(s.text)}</span>
-      ${isLead ? `<button type="button" class="icon-del" title="Hapus sub-tugas" onclick="event.preventDefault();deleteSubtask('${task.id}','${s.id}')">×</button>` : ''}
-    </label>`).join('') : '<p class="empty-hint">Belum ada sub-tugas.</p>';
-
+  $('detailSubtaskList').innerHTML = subs.length ? subs.map(s => `<label class="subtask-item ${s.done ? 'done' : ''}"> <input type="checkbox" ${s.done ? 'checked' : ''} ${canEdit ? '' : 'disabled'} onchange="toggleSubtask('${task.id}','${s.id}',this.checked)" /> <span>${escapeHtml(s.text)}</span> ${isLead ? `<button type="button" class="icon-del" title="Hapus sub-tugas" onclick="event.preventDefault();deleteSubtask('${task.id}','${s.id}')">×</button>` : ''} </label>`).join('') : '<p class="empty-hint">Belum ada sub-tugas.</p>';
   const files = task.attachments || [];
   $('attachUploader').classList.toggle('hidden', !canEdit);
   $('detailAttachList').innerHTML = files.length ? files.map(f => {
     const href = safeUrl(f.url), canDel = isLead || f.uid === state.user.uid;
-    return `<div class="attach-item"><span>🔗</span>
-      <div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div>
-      ${canDel ? `<button type="button" class="icon-del" title="Hapus lampiran" onclick="deleteAttachment('${task.id}','${f.id}')">×</button>` : ''}
-    </div>`;
+    return `<div class="attach-item"><span>🔗</span> <div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div> ${canDel ? `<button type="button" class="icon-del" title="Hapus lampiran" onclick="deleteAttachment('${task.id}','${f.id}')">×</button>` : ''} </div>`;
   }).join('') : '<p class="empty-hint">Belum ada lampiran.</p>';
 }
 
@@ -1151,6 +1070,7 @@ async function addAttachmentLink() {
     notify(state.role === 'mentor' ? [memberUid(t.assignee)] : mentorUids(), { kind: 'file', title: 'Lampiran baru', body: `${name} · ${t.title}`, taskId: t.id });
   } catch (err) { alert('Gagal: ' + err.message); }
 }
+
 window.deleteAttachment = async (taskId, fid) => {
   const t = state.tasks.find(x => x.id === taskId); const f = (t?.attachments || []).find(x => x.id === fid); if (!f) return;
   if (!(state.role === 'mentor' || f.uid === state.user.uid) || !confirm(`Hapus lampiran "${f.name}"?`)) return;
@@ -1161,7 +1081,9 @@ window.deleteAttachment = async (taskId, fid) => {
 /* ===== KALENDER ===== */
 let calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1), calExpanded = null;
 const chipClass = (t) => t.status === 'done' ? 'chip-done' : ({ overdue: 'due-overdue', urgent: 'due-urgent', soon: 'due-soon' }[dueLevel(t)] || 'chip-normal');
+
 window.expandCalDay = (k) => { calExpanded = calExpanded === k ? null : k; renderCalendar(); };
+
 function renderCalendar() {
   const grid = $('calGrid'); if (!grid || $('calendarPanel').classList.contains('hidden')) return;
   const y = calMonth.getFullYear(), m = calMonth.getMonth(), today = localDate();
@@ -1184,20 +1106,9 @@ function renderAnnouncements() {
   const el = $('announceList'); if (!el) return;
   const isLead = state.role === 'mentor';
   const list = [...announcements].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
-  el.innerHTML = list.length ? list.map(a => `
-    <article class="announce-item ${a.pinned ? 'pinned' : ''}">
-      <div class="announce-head">
-        <h4>${a.pinned ? '📌 ' : ''}${escapeHtml(a.title)}</h4>
-        ${isLead ? `<div class="announce-actions">
-          <button type="button" class="btn-sm btn-ghost" onclick="togglePinAnnouncement('${a.id}')">${a.pinned ? 'Lepas pin' : 'Sematkan'}</button>
-          <button type="button" class="btn-sm btn-ghost" onclick="editAnnouncement('${a.id}')">Edit</button>
-          <button type="button" class="btn-sm btn-warning" onclick="deleteAnnouncement('${a.id}')">Hapus</button>
-        </div>` : ''}
-      </div>
-      <p>${escapeHtml(a.body)}</p>
-      <small>${escapeHtml(a.by || 'Lead')} · ${fmtTime(a.createdAt)}</small>
-    </article>`).join('') : '<p class="empty-hint">Belum ada pengumuman dari mentor.</p>';
+  el.innerHTML = list.length ? list.map(a => `<article class="announce-item ${a.pinned ? 'pinned' : ''}"> <div class="announce-head"> <h4>${a.pinned ? '📌 ' : ''}${escapeHtml(a.title)}</h4> ${isLead ? `<div class="announce-actions"> <button type="button" class="btn-sm btn-ghost" onclick="togglePinAnnouncement('${a.id}')">${a.pinned ? 'Lepas pin' : 'Sematkan'}</button> <button type="button" class="btn-sm btn-ghost" onclick="editAnnouncement('${a.id}')">Edit</button> <button type="button" class="btn-sm btn-warning" onclick="deleteAnnouncement('${a.id}')">Hapus</button> </div>` : ''} </div> <p>${escapeHtml(a.body)}</p> <small>${escapeHtml(a.by || 'Lead')} · ${fmtTime(a.createdAt)}</small> </article>`).join('') : '<p class="empty-hint">Belum ada pengumuman dari mentor.</p>';
 }
+
 const annRef = (id) => doc(db, 'workspaces', state.workspaceId, 'announcements', id);
 window.togglePinAnnouncement = (id) => { const a = announcements.find(x => x.id === id); if (a && state.role === 'mentor') updateDoc(annRef(id), { pinned: !a.pinned }).catch(e => alert('Gagal: ' + e.message)); };
 window.editAnnouncement = (id) => {
@@ -1208,6 +1119,7 @@ window.editAnnouncement = (id) => {
   updateDoc(annRef(id), { title: title.trim(), body: body.trim(), updatedAt: serverTimestamp() }).catch(e => alert('Gagal: ' + e.message));
 };
 window.deleteAnnouncement = (id) => { if (state.role === 'mentor' && confirm('Hapus pengumuman ini?')) deleteDoc(annRef(id)).catch(e => alert('Gagal: ' + e.message)); };
+
 async function postAnnouncement(e) {
   e.preventDefault(); if (state.role !== 'mentor') return;
   const title = $('announceTitle').value.trim(), body = $('announceBody').value.trim();
@@ -1251,14 +1163,6 @@ function setupEventListeners() {
   $('dashboardNavBtn').addEventListener('click', () => switchDashboardSection('home'));
   $('myWorkspacesNavBtn').addEventListener('click', () => switchDashboardSection('workspaces'));
   $('notificationsNavBtn').addEventListener('click', () => switchDashboardSection('notifications'));
-  const notifTop = $('notificationsNavBtnTop');
-  if (notifTop) notifTop.addEventListener('click', () => switchDashboardSection('notifications'));
-  const accTop = $('accountBtnTop');
-  if (accTop) accTop.addEventListener('click', () => {
-    $('accountName').value = state.user.displayName || state.user.email.split('@')[0];
-    $('accountPassword').value = '';
-    $('accountModal').classList.remove('hidden');
-  });
   $('createWorkspaceForm').addEventListener('submit', handleCreateWorkspace);
   $('joinWorkspaceForm').addEventListener('submit', handleJoinWorkspace);
   $('backToDashboardBtn').addEventListener('click', backToDashboard);
@@ -1432,4 +1336,5 @@ function init() {
     }
   });
 }
+
 init();
