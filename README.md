@@ -2,7 +2,7 @@
 
 > Satu ruang untuk tugas, divisi, dan tenggat. Mentor membagikan tugas ke seluruh tim, per divisi, atau per orang. Anggota mengirim laporan, mentor memvalidasi. Semua tercatat.
 
-Aplikasi web kolaborasi tim berbasis **HTML + CSS + JavaScript vanilla** dengan **Firebase (Auth & Firestore)** — tanpa framework, tanpa build tool. Dilengkapi modul **produktivitas pribadi** (habit tracker & mood check-in) yang berjalan offline via `localStorage`.
+Aplikasi web kolaborasi tim berbasis **HTML + CSS + JavaScript vanilla** dengan **Firebase (Auth & Firestore)** — tanpa framework, tanpa build tool. Dilengkapi modul **produktivitas pribadi** (kebiasaan, mood, insight) yang disimpan di `localStorage` dan disinkronkan ke akun Anda di Firestore.
 
 ---
 
@@ -40,10 +40,10 @@ Aplikasi web kolaborasi tim berbasis **HTML + CSS + JavaScript vanilla** dengan 
 | **Pengumuman** | Posting, sematkan (pin), edit, hapus (khusus mentor) |
 | **Divisi** | Buat/hapus divisi; anggota divisi terhapus dipindah ke "Umum" |
 | **Kehadiran** | Denyut (*heartbeat*) 60 detik → status "Aktif sekarang" / terakhir aktif |
-| **Notifikasi** | Per pengguna, badge belum dibaca (maks. tampilan `99+`), tandai semua dibaca |
+| **Notifikasi** | Per pengguna, badge belum dibaca (`99+` bila ≥ 100), tandai semua dibaca |
 | **Manajemen anggota** | Ubah peran & divisi, keluarkan anggota, ganti nama (ikut memperbarui semua tugas) |
 
-### Produktivitas Pribadi (localStorage, per perangkat)
+### Produktivitas Pribadi (localStorage + sinkron cloud)
 
 - ✅ **Kebiasaan harian** — checklist dengan streak & streak terpanjang, graf kontribusi ala GitHub (105 sel, 4 level intensitas)
 - 😊 **Mood check-in** — 5 ekspresi + catatan satu kalimat, grafik tren SVG 14 entri terakhir
@@ -67,7 +67,8 @@ Aplikasi web kolaborasi tim berbasis **HTML + CSS + JavaScript vanilla** dengan 
 | Gaya | CSS3 murni — custom properties (design token), grid/flex, animasi |
 | Logika | JavaScript ES Modules (vanilla) |
 | Backend | Firebase 10.8.0 via CDN gstatic — **Authentication** + **Cloud Firestore** |
-| Penyimpanan lokal | `localStorage` (mode gelap, data produktivitas) |
+| Penyimpanan lokal | `localStorage` (mode gelap, cache produktivitas) |
+| Tipografi | Plus Jakarta Sans (Google Fonts) |
 | Build tool | **Tidak ada** — cukup browser + server statis |
 
 ---
@@ -125,20 +126,33 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/workspaces/$(ws)).data.ownerUid == request.auth.uid;
     }
 
+    // Data pribadi: profil, notifikasi, produktivitas (users/{uid}/productivity/data)
     match /users/{uid} {
       allow read, create, update: if signedIn() && request.auth.uid == uid;
       match /notifications/{nid} {
         allow read, update, delete: if signedIn() && request.auth.uid == uid;
-        allow create: if signedIn();
+        allow create: if signedIn();   // mentor/anggota mengirim notifikasi ke orang lain
+      }
+      match /productivity/{doc} {
+        allow read, write: if signedIn() && request.auth.uid == uid;
       }
     }
 
     match /workspaces/{wsId} {
-      allow read:   if signedIn() && isMember(wsId);
+      // Baca terbuka untuk pengguna login agar "gabung via kode" (query joinCode) bisa jalan.
+      // Kode 6 karakter bertindak sebagai kata sandi ruang; jangan simpan data sensitif di dokumen ruang.
+      allow read:   if signedIn();
       allow create: if signedIn();
       allow update: if signedIn() && isMember(wsId);
       allow delete: if signedIn() && isOwner(wsId);
-      match /{document=**} {
+
+      // Pengguna boleh membuat dokumen anggota untuk dirinya sendiri (proses gabung)
+      match /members/{uid} {
+        allow read: if signedIn() && isMember(wsId);
+        allow create: if signedIn() && request.auth.uid == uid;
+        allow update, delete: if signedIn() && isMember(wsId);
+      }
+      match /{col}/{doc=**} {
         allow read, write: if signedIn() && isMember(wsId);
       }
     }
@@ -188,14 +202,17 @@ service cloud.firestore {
 ### `workspaces/{wsId}/activities/{id}` — `type`, `text`, `taskId`, `by`, `uid`, `at`
 ### `workspaces/{wsId}/announcements/{id}` — `title`, `body`, `pinned`, `by`, `uid`, `createdAt`, `updatedAt`
 
-### `localStorage` — key `akasha_productivity_v2`
+### `localStorage` — key `akasha_productivity_v3` (migrasi otomatis dari v2; cadangan di `users/{uid}/productivity/data`)
 ```json
 {
-  "habits":        [{ "id": "...", "name": "Ngoding 1 jam", "streak": 12, "longest": 21, "doneToday": true }],
-  "habitHistory":  [{ "date": "2026-11-17", "level": 3 }],
-  "moodToday":     4,
-  "moodNote":      "Kelar bug login, lega banget.",
-  "moodHistory":   [{ "date": "2026-11-17", "mood": 4 }]
+  "habits":       [{ "id": "...", "name": "Ngoding 1 jam", "streak": 12, "longest": 21, "doneToday": true,
+                    "history": { "2026-11-17": true }, "schedule": { "type": "daily" },
+                    "category": "belajar", "archived": false, "freezes": 1 }],
+  "habitHistory": [{ "date": "2026-11-17", "level": 3 }],
+  "moodToday":    4,
+  "moodHistory":  [{ "date": "2026-11-17", "mood": 4, "note": "Kelar bug login", "tags": [] }],
+  "lastRollDate": "2026-11-17",
+  "celebratedMilestones": { "<habitId>": [7, 21] }
 }
 ```
 
@@ -224,7 +241,7 @@ service cloud.firestore {
 
 ## 🌱 Produktivitas Pribadi
 
-Modul ini **tidak menyentuh Firestore** — seluruh datanya di `localStorage` sehingga privat per perangkat.
+Data utama di `localStorage`, lalu disinkronkan (debounce 600 ms) ke `users/{uid}/productivity/data` sehingga ikut berpindah antar perangkat. Hanya pemilik akun yang bisa membaca (lihat rules).
 
 - **Graf kontribusi**: 105 sel (15 kolom × 7 baris); level 0–4 dihitung dari rasio kebiasaan tercentang hari itu.
 - **Streak**: naik saat centang, turun saat dibatalkan; `longest` menyimpan rekor.
@@ -235,7 +252,7 @@ Modul ini **tidak menyentuh Firestore** — seluruh datanya di `localStorage` se
 
 ## 🎨 Tema & Responsivitas
 
-- **Design token**: palet *ember orange* (`#F97316` dst.) + *warm stone*; seluruh warna komponen memakai `var(--...)`.
+- **Design token**: palet *ember orange* (`#F97316` dst.) + *dusk violet* (`--lilac`, netral keunguan); seluruh warna komponen memakai `var(--...)`.
 - **Mode gelap**: kelas `body.dark-mode`, preferensi tersimpan di `localStorage('darkMode')`, toggle di modal Pengaturan Akun.
 - **Breakpoint**: 1200px (grid dashboard 1 kolom) · 1100px (statistik 2 kolom) · 960px (hero auth disembunyikan) · 768px (sidebar → bottom nav, sidebar workspace → tab horizontal) · 480px · 360px (label menu ikon saja).
 
@@ -243,40 +260,28 @@ Modul ini **tidak menyentuh Firestore** — seluruh datanya di `localStorage` se
 
 ## ⚠️ Batasan Diketahui
 
-1. Data habit & mood tersimpan **per perangkat** — belum sinkron antar perangkat.
-2. `ensureProdToday()` masih kosong: `doneToday` belum otomatis reset saat ganti tanggal, dan streak tidak putus meski berhari-hari tidak dicentang.
-3. Catatan mood (`moodNote`) tersimpan tetapi belum ditampilkan kembali sebagai jurnal.
-4. Grafik mood terbatas 14 titik terakhir; belum ada tampilan bulanan.
-5. Query notifikasi dibatasi `limit(60)`, sehingga penghitung belum dibaca tidak pernah mencapai ≥ 100.
-6. Baris kebiasaan hanya bisa di-toggle; belum ada detail/riwayat per kebiasaan.
+1. Sinkronisasi produktivitas memakai strategi sederhana (data cloud menimpa lokal); belum ada penggabungan per-kebiasaan bila dua perangkat diedit bersamaan.
+2. Notifikasi dimuat dengan `limit(300)`; penghitung belum dibaca tidak melampaui 300.
+3. Rules `workspaces/{id}` mengizinkan anggota mana pun memperbarui dokumen ruang. Untuk produksi, batasi field sensitif (`ownerUid`, `joinCode`) ke mentor/pemilik dan pertimbangkan **App Check**.
+4. Belum ada pengingat push; pengingat lembut hanya tampil saat aplikasi dibuka.
 
 ---
 
-## 🗺️ Roadmap Pengembangan
+## 🗺️ Roadmap
 
-**Tahap 1 — Fondasi data**
-- Roll-over harian (`lastRollDate`, reset `doneToday`, streak putus)
-- Riwayat per kebiasaan (`history` per habit)
-- Jurnal mood (menampilkan kembali catatan lama)
+**Sudah selesai:** roll-over harian, riwayat per kebiasaan, jurnal & grafik mood bulanan, target frekuensi, kategori & arsip, insight korelasi, rekap bulanan, milestone streak, freeze token, sinkron cloud.
 
-**Tahap 2 — Pendalaman**
-- Heatmap mini per kebiasaan (56 sel) & statistik penyelesaian 30 hari
-- Target frekuensi (`daily` / `weekly` / hari tertentu)
-- Ikon, kategori, dan arsip kebiasaan
-- Grafik mood bulanan + tag pemicu mood
-
-**Tahap 3 — Insight & gamifikasi**
-- Kartu insight korelasi kebiasaan × mood
-- Rekap bulanan + tombol salin rekap
-- Milestone streak (7/21/30/66/100 hari), freeze token ❄, pengingat lembut sore hari
-
-**Notifikasi**
-- Badge sembunyi total saat 0 belum dibaca; `99+` saat ≥ 100 (naikkan limit atau query unread terpisah)
+**Berikutnya**
+- Pengingat web push untuk tenggat dan kebiasaan
+- Penggabungan data lintas perangkat per-kebiasaan
+- Query notifikasi belum dibaca terpisah (hilangkan batas 300)
+- Rules per-field untuk dokumen ruang kerja
 
 ---
 
 ## 🤝 Kontribusi
 
+0. Sapaan dashboard (`renderGreeting`) dan efek centang (`celebrate`) menghormati `prefers-reduced-motion`; pertahankan itu.
 1. Pertahankan gaya kode yang ada: helper `escapeHtml()`, `localDate()`, `toast()`, serta dialog in-app (`showAlert`, `askConfirm`, `askText`) — **jangan** memakai `alert/confirm/prompt` bawaan.
 2. Semua konten pengguna wajib lewat `escapeHtml()` sebelum masuk `innerHTML`.
 3. UI baru harus kompatibel `body.dark-mode` dan breakpoint yang sudah ada; gunakan design token `var(--...)`, jangan warna hardcoded.

@@ -271,6 +271,7 @@ function showDashboardView() {
   if ($('topbarUserName')) $('topbarUserName').textContent = name;
   if ($('topbarUserRole')) $('topbarUserRole').textContent = 'Member';
   if ($('topbarUserAvatar')) $('topbarUserAvatar').textContent = initials || 'A';
+  renderGreeting();
   loadUserWorkspaces();
   switchDashboardSection('home');
 }
@@ -541,6 +542,7 @@ function renderDashboardSummary() {
   // Personal productivity features
   renderHabits();
   renderMoodUI();
+  renderGreeting();
 }
 
 function renderDashboardTaskList() {
@@ -1493,6 +1495,68 @@ function setupEventListeners() {
   $('announceForm').addEventListener('submit', postAnnouncement);
 }
 
+/* ══════════ SAPAAN & PERAYAAN KECIL ══════════ */
+function renderGreeting() {
+  const title = $('greetTitle'); if (!title) return;
+  const first = ((state.user?.displayName || '').trim().split(/\s+/)[0]) || 'kamu';
+  const hr = new Date().getHours();
+  const sapa = hr < 11 ? 'Selamat pagi' : hr < 15 ? 'Selamat siang' : hr < 18 ? 'Selamat sore' : 'Selamat malam';
+  title.textContent = `${sapa}, ${first}`;
+
+  const habits = (prodData?.habits || []).filter(x => !x.archived);
+  const done = habits.filter(x => x.doneToday).length;
+  const pct = habits.length ? Math.round(done / habits.length * 100) : 0;
+  const best = habits.reduce((m, x) => Math.max(m, x.streak || 0), 0);
+  let soon = 0, late = 0;
+  dashboardWorkspaces.forEach(ws => {
+    late += ws.stats?.c?.overdue || 0;
+    (ws.tasks || []).forEach(t => {
+      if (t.status === 'done') return;
+      const d = daysLeft(t);
+      if (d !== null && d >= 0 && d <= 7) soon++;
+    });
+  });
+
+  let msg;
+  if (late) msg = `Ada ${late} tugas terlambat. Selesaikan satu dulu, sisanya terasa lebih ringan.`;
+  else if (soon) msg = `${soon} tugas jatuh tempo minggu ini. Kamu masih punya waktu.`;
+  else if (habits.length && done < habits.length) msg = `Tinggal ${habits.length - done} kebiasaan lagi untuk hari ini.`;
+  else if (habits.length) msg = 'Semua kebiasaan hari ini beres. Kerja bagus!';
+  else msg = 'Mulai dari satu kebiasaan kecil hari ini.';
+  if ($('welcomeText')) $('welcomeText').textContent = msg;
+
+  const chips = $('greetChips');
+  if (chips) {
+    chips.innerHTML = [
+      best ? `<span class="chip chip-fire">🔥 ${best} hari beruntun</span>` : '',
+      soon ? `<span class="chip">📅 ${soon} tenggat minggu ini</span>` : '',
+      habits.length ? `<span class="chip">✅ ${done} dari ${habits.length} kebiasaan</span>` : ''
+    ].join('');
+  }
+  const ring = $('greetRing');
+  if (ring) {
+    const C = 2 * Math.PI * 34;
+    ring.setAttribute('aria-label', `Progres kebiasaan hari ini: ${pct} persen`);
+    ring.innerHTML = `<svg viewBox="0 0 80 80" aria-hidden="true"><circle class="ring-bg" cx="40" cy="40" r="34"/><circle class="ring-fg" cx="40" cy="40" r="34" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct / 100)).toFixed(1)}"/></svg><span class="ring-num">${pct}%</span>`;
+  }
+}
+
+function celebrate() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const src = document.activeElement?.getBoundingClientRect?.();
+  const x = src && src.width ? src.left + src.width / 2 : innerWidth / 2;
+  const y = src && src.height ? src.top + src.height / 2 : innerHeight / 3;
+  const colors = ['#FF6A1F', '#6D5BD0', '#16A34A', '#F5B301', '#EC4899'];
+  for (let i = 0; i < 16; i++) {
+    const p = document.createElement('span');
+    const a = (Math.PI * 2 * i) / 16 + Math.random() * .4, d = 46 + Math.random() * 56;
+    p.className = 'confetti';
+    p.style.cssText = `left:${x}px;top:${y}px;background:${colors[i % colors.length]};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 20}px`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 900);
+  }
+}
+
 /* ══════════ PERSONAL PRODUCTIVITY v3 (habits · mood · insight) ══════════ */
 const PROD_KEY = 'akasha_productivity_v3';
 const PROD_KEY_V2 = 'akasha_productivity_v2';
@@ -1850,6 +1914,7 @@ function toggleHabit(id) {
   h.doneToday = !h.doneToday;
   if (!h.history) h.history = {};
   if (h.doneToday) {
+    celebrate();
     h.history[today] = true;
     h.streak += 1;
     if (h.streak > h.longest) h.longest = h.streak;

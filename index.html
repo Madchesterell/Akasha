@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#F97316" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -111,9 +111,13 @@
 
       <!-- ── HOME ── -->
       <section id="dashboardHomePanel">
-        <div class="welcome-alert" id="welcomeAlert">
-          <span class="welcome-dot" aria-hidden="true"></span>
-          <span id="welcomeText">Selamat datang kembali. Ringkasan tugas, tenggat, dan ruang kerja Anda ada di bawah.</span>
+        <div class="greet-hero" id="greetHero">
+          <div class="greet-copy">
+            <h2 class="greet-title" id="greetTitle">Halo!</h2>
+            <p class="greet-text" id="welcomeText">Ringkasan tugas, tenggat, dan kebiasaanmu ada di bawah.</p>
+            <div class="greet-chips" id="greetChips"></div>
+          </div>
+          <div class="greet-ring" id="greetRing" role="img" aria-label="Progres kebiasaan hari ini"></div>
         </div>
 
         <!-- Soft reminder (productivity) -->
