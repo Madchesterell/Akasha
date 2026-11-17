@@ -949,7 +949,7 @@ function renderMembersGrid(members) {
     return `<div class="team-member-card">
       <div class="team-avatar">${escapeHtml(initials)}<span class="presence-dot ${online ? 'online' : ''}"></span></div>
       <div class="team-info">
-        <div class="name-row"><span class="name">${escapeHtml(m.name)}</span>${online ? '<span class="online-label">Online</span>' : ''}</div>
+        <div class="name-row"><span class="name">${escapeHtml(m.name)}</span></div>
         <div class="meta"><span class="role-badge ${m.role}" style="font-size:.6rem;padding:1px 6px">${m.role === 'mentor' ? 'Lead' : 'Member'}</span> · ${escapeHtml(m.division || 'Umum')}</div>
         <div class="meta last-active">${online ? 'Aktif sekarang' : 'Terakhir aktif: ' + timeAgo(m.lastActive)}</div>
       </div>
@@ -1054,7 +1054,19 @@ async function renameUser(newName, oldName) {
 }
 
 /* ══════════ ACTIVITY & NOTIFICATIONS ══════════ */
-const ACT_ICON = { task: '🆕', start: '▶', report: '📤', revision: '↩', done: '✅', reopen: '🔄', delete: '🗑', file: '📎', join: '👋', announce: '📢', subtask: '☑' };
+const ACT_SVG = {
+  task: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
+  start: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
+  report: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
+  revision: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>',
+  done: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>',
+  reopen: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>',
+  delete: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
+  file: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>',
+  join: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>',
+  announce: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>',
+  subtask: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>'
+};
 function logActivity(type, text, taskId = null) {
   if (!state.workspaceId) return;
   addDoc(collection(db, 'workspaces', state.workspaceId, 'activities'), { type, text, taskId, by: state.workerName || '', uid: state.user.uid, at: serverTimestamp() })
@@ -1063,7 +1075,7 @@ function logActivity(type, text, taskId = null) {
 function renderActivities() {
   const el = $('activityList'); if (!el) return;
   el.innerHTML = activities.length
-    ? activities.map(a => `<div class="act-item act-${escapeHtml(a.type)}"><span class="act-icon">${ACT_ICON[a.type] || '•'}</span><div><div>${escapeHtml(a.text)}</div><span class="act-time">${fmtTime(a.at)}</span></div></div>`).join('')
+    ? activities.map(a => `<div class="act-item act-${escapeHtml(a.type)}"><span class="act-icon">${ACT_SVG[a.type] || '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>'}</span><div><div>${escapeHtml(a.text)}</div><span class="act-time">${fmtTime(a.at)}</span></div></div>`).join('')
     : '<p class="empty-hint">Belum ada aktivitas.</p>';
 }
 const memberUid = name => state.members.find(m => m.name === name)?.id;
@@ -1453,41 +1465,30 @@ function setupEventListeners() {
 }
 
 /* ══════════ PERSONAL PRODUCTIVITY (habits · mood) — localStorage ══════════ */
-const PROD_KEY = 'akasha_productivity_v1';
+const PROD_KEY = 'akasha_productivity_v2';
 let prodData = null;
 let selectedMood = null;
 
 function loadProd() {
   try {
     const raw = localStorage.getItem(PROD_KEY);
-    if (raw) { prodData = JSON.parse(raw); return; }
+    if (raw) {
+      prodData = JSON.parse(raw);
+      // pastikan struktur valid
+      if (!Array.isArray(prodData.habits)) prodData.habits = [];
+      if (!Array.isArray(prodData.habitHistory)) prodData.habitHistory = [];
+      if (!Array.isArray(prodData.moodHistory)) prodData.moodHistory = [];
+      return;
+    }
   } catch (_) {}
-  // default
-  const hist = [];
-  for (let i = 104; i >= 0; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    const key = localDate(d);
-    const chance = i < 14 ? 0.65 : i < 40 ? 0.4 : 0.2;
-    hist.push({ date: key, level: Math.random() < chance ? Math.ceil(Math.random() * 4) : 0 });
-  }
-  const moodHist = [];
-  for (let i = 20; i >= 1; i--) {
-    const d = new Date(); d.setDate(d.getDate() - i);
-    moodHist.push({ date: localDate(d), mood: 2 + Math.floor(Math.random() * 4) });
-  }
+  // default kosong — user mulai dari nol
   prodData = {
-    habits: [
-      { id: 'h1', name: 'Ngoding 1 jam', streak: 12, longest: 21, doneToday: false },
-      { id: 'h2', name: 'Olahraga', streak: 5, longest: 9, doneToday: false },
-      { id: 'h3', name: 'Minum 8 gelas', streak: 8, longest: 14, doneToday: false },
-      { id: 'h4', name: 'Baca 20 menit', streak: 3, longest: 7, doneToday: false }
-    ],
-    habitHistory: hist,
+    habits: [],
+    habitHistory: [],
     moodToday: null,
     moodNote: '',
-    moodHistory: moodHist
+    moodHistory: []
   };
-  // reset doneToday if date changed
   saveProd();
 }
 function saveProd() {
@@ -1502,33 +1503,51 @@ function renderHabits() {
   ensureProdToday();
   const list = $('habitList');
   if (!list) return;
-  list.innerHTML = prodData.habits.map(h => `
-    <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${h.id}">
-      <span class="habit-check">${h.doneToday ? '✓' : ''}</span>
-      <span class="habit-name">${escapeHtml(h.name)}</span>
-      <span class="habit-days">${h.streak} hari</span>
-      <button type="button" class="habit-edit-btn" data-edit="${h.id}" title="Edit">✎</button>
-    </div>
-  `).join('');
-  list.querySelectorAll('.habit-item').forEach(el => {
-    el.addEventListener('click', e => {
-      if (e.target.closest('[data-edit]')) return;
-      toggleHabit(el.dataset.id);
+  if (!prodData.habits.length) {
+    list.innerHTML = '<p class="empty-hint" style="padding:.5rem 0">Belum ada kebiasaan. Tekan “Tambah kebiasaan” untuk mulai.</p>';
+  } else {
+    list.innerHTML = prodData.habits.map(h => `
+      <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${h.id}">
+        <span class="habit-check">${h.doneToday ? '✓' : ''}</span>
+        <span class="habit-name">${escapeHtml(h.name)}</span>
+        <span class="habit-days">${h.streak} hari</span>
+        <button type="button" class="habit-edit-btn" data-edit="${h.id}" title="Edit">✎</button>
+      </div>
+    `).join('');
+    list.querySelectorAll('.habit-item').forEach(el => {
+      el.addEventListener('click', e => {
+        if (e.target.closest('[data-edit]')) return;
+        toggleHabit(el.dataset.id);
+      });
     });
-  });
-  list.querySelectorAll('[data-edit]').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      openHabitModal(btn.dataset.edit);
+    list.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openHabitModal(btn.dataset.edit);
+      });
     });
-  });
-  const top = prodData.habits.reduce((a, b) => (a.streak >= b.streak ? a : b), prodData.habits[0] || { name: '', streak: 0, longest: 0 });
+  }
+  const top = prodData.habits.length
+    ? prodData.habits.reduce((a, b) => (a.streak >= b.streak ? a : b), prodData.habits[0])
+    : null;
   const info = $('habitStreakInfo');
-  if (info) info.textContent = top ? `${top.name} · ${top.streak} hari beruntun · terpanjang ${top.longest}` : '';
+  if (info) info.textContent = top && top.streak > 0
+    ? `${top.name} · ${top.streak} hari beruntun · terpanjang ${top.longest}`
+    : (prodData.habits.length ? 'Belum ada streak. Centang kebiasaan hari ini.' : '');
   const graph = $('contribGraph');
   if (graph) {
-    const recent = prodData.habitHistory.slice(-105);
-    graph.innerHTML = recent.map(c => `<div class="contrib-cell lv${c.level}" title="${c.date}"></div>`).join('');
+    // tampilkan 105 sel; kosong = level 0
+    let recent = prodData.habitHistory.slice(-105);
+    if (recent.length < 105) {
+      const pad = 105 - recent.length;
+      const filled = [];
+      for (let i = pad - 1; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - (recent.length + i));
+        filled.push({ date: localDate(d), level: 0 });
+      }
+      recent = filled.concat(recent);
+    }
+    graph.innerHTML = recent.map(c => `<div class="contrib-cell lv${c.level || 0}" title="${c.date || ''}"></div>`).join('');
   }
 }
 function toggleHabit(id) {

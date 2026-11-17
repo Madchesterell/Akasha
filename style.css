@@ -840,3 +840,15 @@ body.dark-mode .legend-cells .lv4{background:#22C55E}
 @media (max-width:480px){
   .dash-stats{grid-template-columns:1fr 1fr}
 }
+
+/* Activity SVG icons */
+.act-icon svg { display: block; }
+.act-icon { color: var(--accent); }
+.act-item.act-report .act-icon { color: var(--warning); }
+.act-item.act-done .act-icon { color: var(--success); }
+.act-item.act-revision .act-icon { color: var(--danger); }
+.act-item.act-delete .act-icon { color: var(--danger); }
+.act-item.act-join .act-icon { color: var(--info); }
+
+/* Hide old online-label if any leftover */
+.online-label { display: none !important; }
