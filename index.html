@@ -111,22 +111,51 @@
 
       <!-- ── HOME ── -->
       <section id="dashboardHomePanel">
-        <div class="welcome-alert">
+        <div class="welcome-alert" id="welcomeAlert">
           <span class="welcome-dot" aria-hidden="true"></span>
-          <span>Selamat datang kembali. Ringkasan tugas, tenggat, dan ruang kerja Anda ada di bawah.</span>
+          <span id="welcomeText">Selamat datang kembali. Ringkasan tugas, tenggat, dan ruang kerja Anda ada di bawah.</span>
         </div>
+
+        <!-- Stats 4 kolom -->
+        <div class="stats-grid dash-stats" id="dashboardSummary"></div>
 
         <div class="dash-grid">
           <div class="dash-main">
-            <!-- 1 · RINGKASAN TUGAS -->
+            <!-- Kebiasaan harian -->
             <div class="card">
               <div class="section-head">
-                <div><h3>Ringkasan tugas</h3><p class="subtitle">Gabungan seluruh ruang kerja yang Anda ikuti.</p></div>
+                <div>
+                  <h3>Kebiasaan harian</h3>
+                  <p class="subtitle">Centang yang sudah kamu kerjakan hari ini.</p>
+                </div>
+                <button class="btn-sm btn-solid" id="addHabitBtn" type="button">Tambah kebiasaan</button>
               </div>
-              <div class="stats-grid" id="dashboardSummary"></div>
+              <div class="habit-layout">
+                <div class="habit-list" id="habitList"></div>
+                <div class="habit-graph-wrap">
+                  <div class="habit-streak-info" id="habitStreakInfo"></div>
+                  <div class="contrib-graph" id="contribGraph" aria-label="Grafik kebiasaan"></div>
+                  <div class="contrib-legend">
+                    <span>Sepi</span>
+                    <span class="legend-cells"><i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i></span>
+                    <span>Rajin</span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <!-- 2 · NOTIFIKASI -->
+            <!-- Daftar tugas ringkas -->
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h3>Daftar tugas</h3>
+                  <p class="subtitle">Urut dari tenggat terdekat.</p>
+                </div>
+              </div>
+              <div id="dashboardTaskList" class="dash-task-list"></div>
+            </div>
+
+            <!-- Notifikasi (tetap ada) -->
             <div class="card">
               <div class="section-head">
                 <div><h3>Notifikasi</h3><p class="subtitle">Tugas yang menunggu tindakan atau baru selesai.</p></div>
@@ -137,7 +166,28 @@
           </div>
 
           <aside class="dash-side">
-            <!-- 3 · TENGGAT MENDEKAT -->
+            <!-- Mood hari ini -->
+            <div class="card mood-card">
+              <h3>Mood hari ini</h3>
+              <p class="subtitle">Pilih satu, tulis satu kalimat.</p>
+              <div class="mood-picker" id="moodPicker" role="group" aria-label="Pilih mood">
+                <button type="button" class="mood-btn" data-mood="1" aria-label="Sangat buruk">😢</button>
+                <button type="button" class="mood-btn" data-mood="2" aria-label="Buruk">😟</button>
+                <button type="button" class="mood-btn" data-mood="3" aria-label="Biasa">😐</button>
+                <button type="button" class="mood-btn" data-mood="4" aria-label="Baik">😊</button>
+                <button type="button" class="mood-btn" data-mood="5" aria-label="Sangat baik">😄</button>
+              </div>
+              <div class="mood-form">
+                <input type="text" id="moodNote" placeholder="Tulis satu kalimat singkat…" maxlength="80" />
+                <button type="button" class="btn-sm btn-solid" id="saveMoodBtn">Simpan</button>
+              </div>
+              <div class="mood-chart-wrap">
+                <div class="mini-title">Tren bulan ini</div>
+                <div class="mood-chart" id="moodChart"></div>
+              </div>
+            </div>
+
+            <!-- Tenggat mendekat -->
             <div class="card">
               <div class="section-head">
                 <div><h3>Tenggat mendekat</h3><p class="subtitle">7 hari ke depan.</p></div>
@@ -145,7 +195,7 @@
               <div class="mini-cal-list" id="miniCalendarList"></div>
             </div>
 
-            <!-- 4 · RUANG KERJA SAYA (kartu saja) -->
+            <!-- Aktivitas / preview ruang kerja -->
             <div class="card">
               <div class="section-head">
                 <div><h3>Ruang kerja saya</h3></div>
@@ -159,16 +209,17 @@
 
       <!-- ── WORKSPACES ── -->
       <section id="myWorkspacesPanel" class="hidden">
-        <div class="card">
-          <div class="section-head">
-            <div><h3>Ruang kerja saya</h3><p class="subtitle">Semua ruang yang Anda ikuti sebagai mentor atau anggota.</p></div>
+        <div class="ws-page-head">
+          <div>
+            <h3 class="ws-page-title">Ruang kerja saya</h3>
+            <p class="subtitle">Semua ruang yang kamu ikuti sebagai mentor atau anggota.</p>
           </div>
           <div class="workspace-action-bar">
             <button class="btn-workspace-action primary" id="createWorkspaceBtn"><span class="btn-icon" aria-hidden="true">＋</span> Buat ruang kerja</button>
             <button class="btn-workspace-action secondary" id="joinWorkspaceBtn"><span class="btn-icon" aria-hidden="true">↗</span> Gabung dengan kode</button>
           </div>
-          <div id="workspaceList"></div>
         </div>
+        <div id="workspaceList" class="ws-card-grid"></div>
       </section>
 
       <!-- ── NOTIFICATIONS ── -->
@@ -523,6 +574,24 @@
       <div class="form-group"><label for="editAnnounceTitle">Judul *</label><input type="text" id="editAnnounceTitle" class="field" required /></div>
       <div class="form-group"><label for="editAnnounceBody">Isi pengumuman *</label><textarea id="editAnnounceBody" class="field" rows="5" required></textarea></div>
       <button type="submit" class="btn-primary">Simpan pengumuman</button>
+    </form>
+  </div>
+</div>
+
+<div id="habitModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="habitModalTitle">
+  <div class="modal-content">
+    <button class="close-modal" data-close="habitModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title" id="habitModalTitle">Tambah kebiasaan</h2>
+    <form id="habitForm">
+      <input type="hidden" id="habitEditId" value="" />
+      <div class="form-group">
+        <label for="habitNameInput">Nama kebiasaan *</label>
+        <input type="text" id="habitNameInput" class="field" placeholder="Contoh: Ngoding 1 jam" maxlength="40" required />
+      </div>
+      <div class="dialog-actions" style="margin-top:1rem">
+        <button type="button" class="btn-sm btn-ghost hidden" id="habitDeleteBtn">Hapus</button>
+        <button type="submit" class="btn-sm btn-solid" id="habitSaveBtn">Simpan</button>
+      </div>
     </form>
   </div>
 </div>

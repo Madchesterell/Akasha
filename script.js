@@ -402,21 +402,64 @@ async function loadUserWorkspaces() {
 function renderWorkspaceList(workspaces) {
   const card = ws => {
     const code = ws.joinCode || '';
-    return `<div class="workspace-card" role="button" tabindex="0" onclick="openWorkspace('${ws.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openWorkspace('${ws.id}')}">
+    const s = ws.stats || { c: {}, total: 0, action: 0 };
+    const total = s.total || 0;
+    const done = s.c?.done || 0;
+    const progress = total ? Math.round((done / total) * 100) : 0;
+    const waiting = s.action || 0;
+    const roleLabel = ws.role === 'mentor' ? 'Mentor' : 'Member';
+    const roleClass = ws.role === 'mentor' ? 'badge-role-mentor' : 'badge-role-member';
+    return `<div class="ws-card-item" role="button" tabindex="0" onclick="openWorkspace('${ws.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openWorkspace('${ws.id}')}">
       <div class="ws-card-top">
-        <h3>${escapeHtml(ws.name)}</h3>
-        <span class="role-badge ${ws.role}">${ws.role === 'mentor' ? 'MENTOR' : 'ANGGOTA'}</span>
+        <div>
+          <div class="ws-card-name">${escapeHtml(ws.name)}</div>
+          <div class="ws-card-meta">${escapeHtml(ws.role === 'mentor' ? 'Kamu pengelolanya' : 'Anggota')}</div>
+        </div>
+        <span class="${roleClass}">${roleLabel}</span>
       </div>
-      <div class="ws-card-code">
-        <span class="ws-code-label">Kode</span>
-        <code class="ws-code-value">${escapeHtml(code || '——')}</code>
-        ${code ? `<button type="button" class="ws-code-copy" title="Salin kode undangan" aria-label="Salin kode undangan" onclick="event.stopPropagation();copyJoinCode('${escapeHtml(code)}')">⧉</button>` : ''}
+      <div>
+        <div class="ws-progress-bar"><div class="ws-progress-fill" style="width:${progress}%"></div></div>
+        <div class="ws-progress-text">${progress}% selesai · ${waiting} tugas menunggu kamu</div>
+      </div>
+      <div class="ws-card-foot">
+        <span class="ws-code-label">KODE ${escapeHtml(code || '——')}</span>
+        <button type="button" class="btn-sm btn-ghost" onclick="event.stopPropagation();openWorkspace('${ws.id}')">Buka ruang</button>
       </div>
     </div>`;
   };
   const empty = '<p class="empty-hint">Belum ada ruang kerja. Buat atau gabung dengan kode undangan.</p>';
-  if ($('workspaceList')) $('workspaceList').innerHTML = workspaces.length ? `<div class="workspace-grid">${workspaces.map(card).join('')}</div>` : empty;
-  if ($('dashboardWorkspacePreview')) $('dashboardWorkspacePreview').innerHTML = workspaces.length ? `<div class="workspace-grid">${workspaces.map(card).join('')}</div>` : empty;
+  const joinCard = `<div class="ws-card-item ws-join-card-item">
+    <h3 style="font-size:.95rem;font-weight:700">Punya kode undangan?</h3>
+    <p style="font-size:.8rem;color:var(--text-muted)">Masukkan 6 karakter dari mentormu.</p>
+    <div class="ws-join-form">
+      <input type="text" id="inlineJoinCode" maxlength="6" class="field code-field" placeholder="ABC123" />
+      <button type="button" class="btn-sm btn-solid" id="inlineJoinBtn">Gabung</button>
+    </div>
+  </div>`;
+  if ($('workspaceList')) {
+    $('workspaceList').innerHTML = workspaces.length ? workspaces.map(card).join('') + joinCard : empty + joinCard;
+    const btn = $('inlineJoinBtn');
+    if (btn) btn.onclick = () => {
+      const code = ($('inlineJoinCode')?.value || '').trim().toUpperCase();
+      if (code.length === 6) { $('joinCodeInput').value = code; $('joinWorkspaceModal').classList.remove('hidden'); }
+      else toast('Kode harus 6 karakter', 'info');
+    };
+  }
+  if ($('dashboardWorkspacePreview')) {
+    $('dashboardWorkspacePreview').innerHTML = workspaces.length
+      ? workspaces.slice(0, 3).map(ws => {
+          const s = ws.stats || { c: {}, total: 0 };
+          const total = s.total || 0;
+          const done = s.c?.done || 0;
+          const progress = total ? Math.round((done / total) * 100) : 0;
+          return `<div class="ws-card-item" style="padding:.85rem;cursor:pointer;margin-bottom:.5rem" onclick="openWorkspace('${ws.id}')">
+            <div class="ws-card-name" style="font-size:.9rem">${escapeHtml(ws.name)}</div>
+            <div class="ws-progress-bar" style="margin-top:.4rem"><div class="ws-progress-fill" style="width:${progress}%"></div></div>
+            <div class="ws-progress-text">${progress}% · ${s.action || 0} menunggu</div>
+          </div>`;
+        }).join('')
+      : '<p class="empty-hint">Belum ada ruang kerja.</p>';
+  }
 }
 window.copyJoinCode = async (code) => {
   try {
@@ -477,16 +520,57 @@ function renderMiniCalendar() {
 }
 function renderDashboardSummary() {
   const el = $('dashboardSummary'); if (!el) return;
-  let total = 0, done = 0, action = 0, overdue = 0;
+  let total = 0, done = 0, action = 0, overdue = 0, soon = 0;
   dashboardWorkspaces.forEach(ws => {
     const s = ws.stats || { c: {}, total: 0, action: 0 };
     total += s.total; done += (s.c.done || 0); action += s.action; overdue += (s.c.overdue || 0);
+    (ws.tasks || []).forEach(t => {
+      if (t.status === 'done') return;
+      const d = daysLeft(t);
+      if (d !== null && d >= 0 && d <= 7) soon++;
+    });
   });
   el.innerHTML = `
-    <div class="summary-item"><div class="num">${total}</div><div class="lbl">Total Tugas</div></div>
-    <div class="summary-item"><div class="num" style="color:var(--success)">${done}</div><div class="lbl">Selesai</div></div>
-    <div class="summary-item"><div class="num" style="color:var(--warning)">${action}</div><div class="lbl">Perlu Tindakan</div></div>
-    <div class="summary-item"><div class="num" style="color:var(--danger)">${overdue}</div><div class="lbl">Terlambat</div></div>`;
+    <div class="summary-item"><div class="num">${total}</div><div class="lbl">Total tugas</div></div>
+    <div class="summary-item stat-success"><div class="num">${done}</div><div class="lbl">Selesai</div></div>
+    <div class="summary-item stat-warning"><div class="num">${soon || action}</div><div class="lbl">Tenggat mendekat</div></div>
+    <div class="summary-item stat-danger"><div class="num">${overdue}</div><div class="lbl">Terlambat</div></div>`;
+
+  // Render task list for dashboard
+  renderDashboardTaskList();
+  // Personal productivity features
+  renderHabits();
+  renderMoodUI();
+}
+
+function renderDashboardTaskList() {
+  const el = $('dashboardTaskList'); if (!el) return;
+  const items = [];
+  dashboardWorkspaces.forEach(ws => (ws.tasks || []).forEach(t => {
+    if (ws.role === 'worker' && t.assignee !== ws.workerName) return;
+    items.push({ ...t, workspaceName: ws.name, workspaceId: ws.id });
+  }));
+  items.sort((a, b) => String(a.endDate || '9999').localeCompare(String(b.endDate || '9999')));
+  const top = items.slice(0, 6);
+  if (!top.length) {
+    el.innerHTML = '<p class="empty-hint">Belum ada tugas.</p>';
+    return;
+  }
+  el.innerHTML = top.map(t => {
+    const [label, cls] = statusInfo(t);
+    const due = t.endDate ? dueLabel(t) : '—';
+    const dueCls = dueLevel(t);
+    return `<div class="dash-task-row" onclick="openWorkspace('${t.workspaceId}')">
+      <div class="dash-task-info">
+        <div class="dash-task-title">${escapeHtml(t.title)}</div>
+        <div class="dash-task-meta">${escapeHtml(t.workspaceName)}${t.assignee ? ' · ' + escapeHtml(t.assignee) : ''}</div>
+      </div>
+      <div class="dash-task-badges">
+        <span class="stat-pill ${cls}">${label}</span>
+        ${dueCls ? `<span class="due-badge due-${dueCls}">${due}</span>` : `<span class="stat-pill s-todo">${due}</span>`}
+      </div>
+    </div>`;
+  }).join('');
 }
 
 /* ══════════ WORKSPACE ══════════ */
@@ -1368,12 +1452,199 @@ function setupEventListeners() {
   $('announceForm').addEventListener('submit', postAnnouncement);
 }
 
+/* ══════════ PERSONAL PRODUCTIVITY (habits · mood) — localStorage ══════════ */
+const PROD_KEY = 'akasha_productivity_v1';
+let prodData = null;
+let selectedMood = null;
+
+function loadProd() {
+  try {
+    const raw = localStorage.getItem(PROD_KEY);
+    if (raw) { prodData = JSON.parse(raw); return; }
+  } catch (_) {}
+  // default
+  const hist = [];
+  for (let i = 104; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const key = localDate(d);
+    const chance = i < 14 ? 0.65 : i < 40 ? 0.4 : 0.2;
+    hist.push({ date: key, level: Math.random() < chance ? Math.ceil(Math.random() * 4) : 0 });
+  }
+  const moodHist = [];
+  for (let i = 20; i >= 1; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    moodHist.push({ date: localDate(d), mood: 2 + Math.floor(Math.random() * 4) });
+  }
+  prodData = {
+    habits: [
+      { id: 'h1', name: 'Ngoding 1 jam', streak: 12, longest: 21, doneToday: false },
+      { id: 'h2', name: 'Olahraga', streak: 5, longest: 9, doneToday: false },
+      { id: 'h3', name: 'Minum 8 gelas', streak: 8, longest: 14, doneToday: false },
+      { id: 'h4', name: 'Baca 20 menit', streak: 3, longest: 7, doneToday: false }
+    ],
+    habitHistory: hist,
+    moodToday: null,
+    moodNote: '',
+    moodHistory: moodHist
+  };
+  // reset doneToday if date changed
+  saveProd();
+}
+function saveProd() {
+  try { localStorage.setItem(PROD_KEY, JSON.stringify(prodData)); } catch (_) {}
+}
+function ensureProdToday() {
+  if (!prodData) loadProd();
+  // Optionally reset doneToday at day change — keep simple for now
+}
+
+function renderHabits() {
+  ensureProdToday();
+  const list = $('habitList');
+  if (!list) return;
+  list.innerHTML = prodData.habits.map(h => `
+    <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${h.id}">
+      <span class="habit-check">${h.doneToday ? '✓' : ''}</span>
+      <span class="habit-name">${escapeHtml(h.name)}</span>
+      <span class="habit-days">${h.streak} hari</span>
+      <button type="button" class="habit-edit-btn" data-edit="${h.id}" title="Edit">✎</button>
+    </div>
+  `).join('');
+  list.querySelectorAll('.habit-item').forEach(el => {
+    el.addEventListener('click', e => {
+      if (e.target.closest('[data-edit]')) return;
+      toggleHabit(el.dataset.id);
+    });
+  });
+  list.querySelectorAll('[data-edit]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      openHabitModal(btn.dataset.edit);
+    });
+  });
+  const top = prodData.habits.reduce((a, b) => (a.streak >= b.streak ? a : b), prodData.habits[0] || { name: '', streak: 0, longest: 0 });
+  const info = $('habitStreakInfo');
+  if (info) info.textContent = top ? `${top.name} · ${top.streak} hari beruntun · terpanjang ${top.longest}` : '';
+  const graph = $('contribGraph');
+  if (graph) {
+    const recent = prodData.habitHistory.slice(-105);
+    graph.innerHTML = recent.map(c => `<div class="contrib-cell lv${c.level}" title="${c.date}"></div>`).join('');
+  }
+}
+function toggleHabit(id) {
+  const h = prodData.habits.find(x => x.id === id);
+  if (!h) return;
+  h.doneToday = !h.doneToday;
+  if (h.doneToday) { h.streak += 1; if (h.streak > h.longest) h.longest = h.streak; }
+  else h.streak = Math.max(0, h.streak - 1);
+  const today = localDate();
+  let cell = prodData.habitHistory.find(c => c.date === today);
+  if (!cell) { cell = { date: today, level: 0 }; prodData.habitHistory.push(cell); }
+  const doneCount = prodData.habits.filter(x => x.doneToday).length;
+  cell.level = Math.min(4, Math.ceil((doneCount / Math.max(1, prodData.habits.length)) * 4));
+  saveProd();
+  renderHabits();
+  toast(h.doneToday ? `✓ ${h.name}` : `Dibatalkan: ${h.name}`, 'success');
+}
+function openHabitModal(id) {
+  const isEdit = !!id;
+  $('habitModalTitle').textContent = isEdit ? 'Edit kebiasaan' : 'Tambah kebiasaan';
+  $('habitEditId').value = id || '';
+  const h = id ? prodData.habits.find(x => x.id === id) : null;
+  $('habitNameInput').value = h ? h.name : '';
+  $('habitDeleteBtn').classList.toggle('hidden', !isEdit);
+  $('habitModal').classList.remove('hidden');
+  setTimeout(() => $('habitNameInput').focus(), 40);
+}
+function setupProductivityEvents() {
+  $('addHabitBtn')?.addEventListener('click', () => openHabitModal(null));
+  $('habitForm')?.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = $('habitNameInput').value.trim();
+    if (!name) return;
+    const id = $('habitEditId').value;
+    if (id) {
+      const h = prodData.habits.find(x => x.id === id);
+      if (h) h.name = name;
+      toast('Kebiasaan diperbarui', 'success');
+    } else {
+      prodData.habits.push({ id: newId(), name, streak: 0, longest: 0, doneToday: false });
+      toast('Kebiasaan ditambahkan', 'success');
+    }
+    saveProd();
+    $('habitModal').classList.add('hidden');
+    renderHabits();
+  });
+  $('habitDeleteBtn')?.addEventListener('click', async () => {
+    const id = $('habitEditId').value;
+    if (!id) return;
+    if (!await askConfirm('Hapus kebiasaan ini?', { title: 'Hapus', confirmText: 'Hapus', danger: true })) return;
+    prodData.habits = prodData.habits.filter(h => h.id !== id);
+    saveProd();
+    $('habitModal').classList.add('hidden');
+    renderHabits();
+    toast('Kebiasaan dihapus', 'info');
+  });
+
+  // Mood
+  document.querySelectorAll('.mood-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      selectedMood = Number(b.dataset.mood);
+      document.querySelectorAll('.mood-btn').forEach(x => x.classList.toggle('selected', Number(x.dataset.mood) === selectedMood));
+    });
+  });
+  $('saveMoodBtn')?.addEventListener('click', () => {
+    if (!selectedMood && !prodData.moodToday) { toast('Pilih mood dulu', 'info'); return; }
+    const mood = selectedMood || prodData.moodToday;
+    prodData.moodToday = mood;
+    prodData.moodNote = ($('moodNote')?.value || '').trim();
+    const today = localDate();
+    const existing = prodData.moodHistory.find(m => m.date === today);
+    if (existing) existing.mood = mood;
+    else prodData.moodHistory.push({ date: today, mood });
+    saveProd();
+    renderMoodUI();
+    toast('Mood hari ini disimpan', 'success');
+  });
+}
+function renderMoodUI() {
+  ensureProdToday();
+  selectedMood = prodData.moodToday;
+  document.querySelectorAll('.mood-btn').forEach(b => {
+    b.classList.toggle('selected', Number(b.dataset.mood) === selectedMood);
+  });
+  if ($('moodNote') && prodData.moodNote) $('moodNote').value = prodData.moodNote;
+
+  const chart = $('moodChart');
+  if (!chart) return;
+  const hist = prodData.moodHistory.slice(-14);
+  if (!hist.length) { chart.innerHTML = ''; return; }
+  const w = 260, h = 68, pad = 6;
+  const pts = hist.map((m, i) => {
+    const x = pad + (i / Math.max(1, hist.length - 1)) * (w - pad * 2);
+    const y = h - pad - ((m.mood - 1) / 4) * (h - pad * 2);
+    return [x, y];
+  });
+  const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+  const area = line + ` L${pts[pts.length - 1][0]},${h} L${pts[0][0]},${h} Z`;
+  chart.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs><linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#EA580C" stop-opacity="0.22"/><stop offset="100%" stop-color="#EA580C" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${area}" fill="url(#moodGrad)"/>
+    <path d="${line}" fill="none" stroke="#EA580C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    ${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.8" fill="#EA580C"/>`).join('')}
+  </svg>`;
+}
+
 /* ══════════ INIT ══════════ */
 function init() {
   setDefaultDates();
   initDarkMode();
   enhanceAllSelects();
+  loadProd();
   setupEventListeners();
+  setupProductivityEvents();
   onAuthStateChanged(auth, user => {
     if (user) {
       state.user = user;
