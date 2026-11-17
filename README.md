@@ -1,29 +1,29 @@
-# 🟠 Akasha — Ruang Kerja Tim
+# Akasha: Ruang Kerja Tim
 
 > Satu ruang untuk tugas, divisi, dan tenggat. Mentor membagikan tugas ke seluruh tim, per divisi, atau per orang. Anggota mengirim laporan, mentor memvalidasi. Semua tercatat.
 
-Aplikasi web kolaborasi tim berbasis **HTML + CSS + JavaScript vanilla** dengan **Firebase (Auth & Firestore)** — tanpa framework, tanpa build tool. Dilengkapi modul **produktivitas pribadi** (kebiasaan, mood, insight) yang disimpan di `localStorage` dan disinkronkan ke akun Anda di Firestore.
+Aplikasi web kolaborasi tim berbasis **HTML + CSS + JavaScript vanilla** dengan **Firebase (Auth & Firestore)**: tanpa framework, tanpa build tool. Dilengkapi modul **produktivitas pribadi** (habit tracker & mood check-in) yang disimpan di `localStorage` dan disinkronkan ke akun Anda di Firestore.
 
 ---
 
-## 📋 Daftar Isi
+## Daftar Isi
 
-- [Fitur](#-fitur)
-- [Tech Stack](#-tech-stack)
-- [Struktur Proyek](#-struktur-proyek)
-- [Cara Menjalankan](#-cara-menjalankan)
-- [Setup Firebase](#-setup-firebase)
-- [Skema Data Firestore](#-skema-data-firestore)
-- [Alur Status & Tenggat Tugas](#-alur-status--tenggat-tugas)
-- [Produktivitas Pribadi](#-produktivitas-pribadi)
-- [Tema & Responsivitas](#-tema--responsivitas)
-- [Batasan Diketahui](#-batasan-diketahui)
-- [Roadmap Pengembangan](#-roadmap-pengembangan)
-- [Kontribusi](#-kontribusi)
+- [Fitur](#fitur)
+- [Tech Stack](#tech-stack)
+- [Struktur Proyek](#struktur-proyek)
+- [Cara Menjalankan](#cara-menjalankan)
+- [Setup Firebase](#setup-firebase)
+- [Skema Data Firestore](#skema-data-firestore)
+- [Alur Status & Tenggat Tugas](#alur-status--tenggat-tugas)
+- [Produktivitas Pribadi](#produktivitas-pribadi)
+- [Tema & Responsivitas](#tema--responsivitas)
+- [Batasan Diketahui](#batasan-diketahui)
+- [Roadmap Pengembangan](#roadmap-pengembangan)
+- [Kontribusi](#kontribusi)
 
 ---
 
-## ✨ Fitur
+## Fitur
 
 ### Kolaborasi Tim (Firebase)
 
@@ -40,16 +40,16 @@ Aplikasi web kolaborasi tim berbasis **HTML + CSS + JavaScript vanilla** dengan 
 | **Pengumuman** | Posting, sematkan (pin), edit, hapus (khusus mentor) |
 | **Divisi** | Buat/hapus divisi; anggota divisi terhapus dipindah ke "Umum" |
 | **Kehadiran** | Denyut (*heartbeat*) 60 detik → status "Aktif sekarang" / terakhir aktif |
-| **Notifikasi** | Per pengguna, badge belum dibaca (`99+` bila ≥ 100), tandai semua dibaca |
+| **Notifikasi** | Per pengguna, badge belum dibaca (`99+` bila 100 atau lebih), tandai semua dibaca |
 | **Manajemen anggota** | Ubah peran & divisi, keluarkan anggota, ganti nama (ikut memperbarui semua tugas) |
 
 ### Produktivitas Pribadi (localStorage + sinkron cloud)
 
-- ✅ **Kebiasaan harian** — checklist dengan streak & streak terpanjang, graf kontribusi ala GitHub (105 sel, 4 level intensitas)
-- 😊 **Mood check-in** — 5 ekspresi + catatan satu kalimat, grafik tren SVG 14 entri terakhir
-- 📊 **Kartu statistik dashboard** — Total tugas, Selesai, Tenggat mendekat, Terlambat
-- 📅 **Mini kalender tenggat** — 7 hari ke depan dari semua ruang kerja
-- 📋 **Daftar tugas terdekat** — urut tenggat, lintas ruang kerja
+-  **Kebiasaan harian**: checklist dengan streak & streak terpanjang, graf kontribusi ala GitHub (105 sel, 4 level intensitas)
+-  **Mood check-in**: 5 ekspresi + catatan satu kalimat, grafik tren SVG 14 entri terakhir
+-  **Kartu statistik dashboard**: Total tugas, Selesai, Tenggat mendekat, Terlambat
+-  **Mini kalender tenggat**: 7 hari ke depan dari semua ruang kerja
+-  **Daftar tugas terdekat**: urut tenggat, lintas ruang kerja
 
 ### Pengalaman Pengguna
 
@@ -59,21 +59,21 @@ Aplikasi web kolaborasi tim berbasis **HTML + CSS + JavaScript vanilla** dengan 
 
 ---
 
-## 🧰 Tech Stack
+## Tech Stack
 
 | Lapisan | Teknologi |
 |---|---|
 | Markup | HTML5 semantik |
-| Gaya | CSS3 murni — custom properties (design token), grid/flex, animasi |
+| Gaya | CSS3 murni: custom properties (design token), grid/flex, animasi |
 | Logika | JavaScript ES Modules (vanilla) |
-| Backend | Firebase 10.8.0 via CDN gstatic — **Authentication** + **Cloud Firestore** |
-| Penyimpanan lokal | `localStorage` (mode gelap, cache produktivitas) |
+| Backend | Firebase 10.8.0 via CDN gstatic: **Authentication** + **Cloud Firestore** |
+| Penyimpanan lokal | `localStorage` (tema, cache produktivitas) |
 | Tipografi | Plus Jakarta Sans (Google Fonts) |
-| Build tool | **Tidak ada** — cukup browser + server statis |
+| Build tool | **Tidak ada**: cukup browser + server statis |
 
 ---
 
-## 📁 Struktur Proyek
+## Struktur Proyek
 
 ```
 akasha/
@@ -84,13 +84,13 @@ akasha/
 
 ---
 
-## 🚀 Cara Menjalankan
+## Cara Menjalankan
 
 ### Prasyarat
 
 - Browser modern (Chrome/Edge/Firefox/Safari)
 - Koneksi internet (modul Firebase dimuat dari CDN)
-- Server statis lokal — **ES Modules tidak berjalan lewat `file://`**
+- Server statis lokal: **ES Modules tidak berjalan lewat `file://`**
 
 ### Langkah
 
@@ -108,7 +108,7 @@ akasha/
 
 ---
 
-## 🔥 Setup Firebase
+## Setup Firebase
 
 1. **Authentication** → aktifkan provider *Email/Password* dan *Google*.
 2. **Firestore Database** → buat database (mode produksi disarankan, lalu terapkan rules di bawah).
@@ -131,7 +131,7 @@ service cloud.firestore {
       allow read, create, update: if signedIn() && request.auth.uid == uid;
       match /notifications/{nid} {
         allow read, update, delete: if signedIn() && request.auth.uid == uid;
-        allow create: if signedIn();   // mentor/anggota mengirim notifikasi ke orang lain
+        allow create: if signedIn();   // pengguna lain mengirim notifikasi ke Anda
       }
       match /productivity/{doc} {
         allow read, write: if signedIn() && request.auth.uid == uid;
@@ -146,10 +146,9 @@ service cloud.firestore {
       allow update: if signedIn() && isMember(wsId);
       allow delete: if signedIn() && isOwner(wsId);
 
-      // Pengguna boleh membuat dokumen anggota untuk dirinya sendiri (proses gabung)
       match /members/{uid} {
         allow read: if signedIn() && isMember(wsId);
-        allow create: if signedIn() && request.auth.uid == uid;
+        allow create: if signedIn() && request.auth.uid == uid;   // proses gabung
         allow update, delete: if signedIn() && isMember(wsId);
       }
       match /{col}/{doc=**} {
@@ -160,11 +159,11 @@ service cloud.firestore {
 }
 ```
 
-> ⚠️ Kunci API Firebase memang terlihat di sisi klien — itu normal. Keamanan sesungguhnya ditegakkan oleh **Security Rules** di atas. Untuk produksi, pertimbangkan menambahkan **App Check**.
+>  Kunci API Firebase memang terlihat di sisi klien: itu normal. Keamanan sesungguhnya ditegakkan oleh **Security Rules** di atas. Untuk produksi, pertimbangkan menambahkan **App Check**.
 
 ---
 
-## 🗄️ Skema Data Firestore
+## Skema Data Firestore
 
 ### `users/{uid}`
 | Field | Tipe | Keterangan |
@@ -198,11 +197,11 @@ service cloud.firestore {
 | `history[]` | `{type: laporan·revisi·selesai, by, text, at}` |
 | `createdAt`, `updatedAt` | timestamp |
 
-### `workspaces/{wsId}/divisions/{id}` — `name`, `desc`, `createdAt`
-### `workspaces/{wsId}/activities/{id}` — `type`, `text`, `taskId`, `by`, `uid`, `at`
-### `workspaces/{wsId}/announcements/{id}` — `title`, `body`, `pinned`, `by`, `uid`, `createdAt`, `updatedAt`
+### `workspaces/{wsId}/divisions/{id}`: `name`, `desc`, `createdAt`
+### `workspaces/{wsId}/activities/{id}`: `type`, `text`, `taskId`, `by`, `uid`, `at`
+### `workspaces/{wsId}/announcements/{id}`: `title`, `body`, `pinned`, `by`, `uid`, `createdAt`, `updatedAt`
 
-### `localStorage` — key `akasha_productivity_v3` (migrasi otomatis dari v2; cadangan di `users/{uid}/productivity/data`)
+### `localStorage`: key `akasha_productivity_v3` (migrasi otomatis dari v2; cadangan di `users/{uid}/productivity/data`)
 ```json
 {
   "habits":       [{ "id": "...", "name": "Ngoding 1 jam", "streak": 12, "longest": 21, "doneToday": true,
@@ -218,7 +217,7 @@ service cloud.firestore {
 
 ---
 
-## 🔁 Alur Status & Tenggat Tugas
+## Alur Status & Tenggat Tugas
 
 **Status**
 
@@ -239,9 +238,9 @@ service cloud.firestore {
 
 ---
 
-## 🌱 Produktivitas Pribadi
+## Produktivitas Pribadi
 
-Data utama di `localStorage`, lalu disinkronkan (debounce 600 ms) ke `users/{uid}/productivity/data` sehingga ikut berpindah antar perangkat. Hanya pemilik akun yang bisa membaca (lihat rules).
+Data utama di `localStorage`, lalu disinkronkan (jeda 600 ms) ke `users/{uid}/productivity/data` agar ikut berpindah antar perangkat. Hanya pemilik akun yang bisa membacanya.
 
 - **Graf kontribusi**: 105 sel (15 kolom × 7 baris); level 0–4 dihitung dari rasio kebiasaan tercentang hari itu.
 - **Streak**: naik saat centang, turun saat dibatalkan; `longest` menyimpan rekor.
@@ -250,51 +249,48 @@ Data utama di `localStorage`, lalu disinkronkan (debounce 600 ms) ke `users/{uid
 
 ---
 
-## 🎨 Tema & Responsivitas
+## Tema & Responsivitas
 
-- **Design token**: palet *ember orange* (`#F97316` dst.) + *dusk violet* (`--lilac`, netral keunguan); seluruh warna komponen memakai `var(--...)`.
+- **Arah desain** (blok "ARAH DESAIN" di akhir `style.css`): satu aksen ember oranye di atas netral warm-stone. Teks di atas aksen memakai `var(--on-accent)` agar kontras tetap 4.5:1 di mode terang dan gelap. Tanpa gradien, glow, atau kaca; bayangan hanya untuk modal, menu, dan kartu sapaan.
+- **Tiga tema**: Terang, Gelap, dan Playful (datar, satu aksen mawar). Ketiganya diperiksa kontrasnya.
 - **Mode gelap**: kelas `body.dark-mode`, preferensi tersimpan di `localStorage('darkMode')`, toggle di modal Pengaturan Akun.
 - **Breakpoint**: 1200px (grid dashboard 1 kolom) · 1100px (statistik 2 kolom) · 960px (hero auth disembunyikan) · 768px (sidebar → bottom nav, sidebar workspace → tab horizontal) · 480px · 360px (label menu ikon saja).
 
 ---
 
-## ⚠️ Batasan Diketahui
+## Batasan Diketahui
 
-1. Sinkronisasi produktivitas memakai strategi sederhana (data cloud menimpa lokal); belum ada penggabungan per-kebiasaan bila dua perangkat diedit bersamaan.
+1. Sinkron produktivitas memakai strategi sederhana (data cloud menimpa lokal); belum ada penggabungan per kebiasaan bila dua perangkat diedit bersamaan.
 2. Notifikasi dimuat dengan `limit(300)`; penghitung belum dibaca tidak melampaui 300.
-3. Rules `workspaces/{id}` mengizinkan anggota mana pun memperbarui dokumen ruang. Untuk produksi, batasi field sensitif (`ownerUid`, `joinCode`) ke mentor/pemilik dan pertimbangkan **App Check**.
+3. Rules `workspaces/{id}` mengizinkan anggota mana pun memperbarui dokumen ruang. Untuk produksi, batasi field sensitif (`ownerUid`, `joinCode`) dan pertimbangkan **App Check**.
 4. Belum ada pengingat push; pengingat lembut hanya tampil saat aplikasi dibuka.
 
 ---
 
-## 🗺️ Roadmap
+## Roadmap
 
-**Sudah selesai:** roll-over harian, riwayat per kebiasaan, jurnal & grafik mood bulanan, target frekuensi, kategori & arsip, insight korelasi, rekap bulanan, milestone streak, freeze token, sinkron cloud.
+Sudah selesai: roll-over harian, riwayat per kebiasaan, jurnal dan grafik mood bulanan, target frekuensi, kategori dan arsip, insight korelasi, rekap bulanan, milestone streak, freeze token, sinkron cloud.
 
-**Berikutnya**
-- Pengingat web push untuk tenggat dan kebiasaan
-- Penggabungan data lintas perangkat per-kebiasaan
-- Query notifikasi belum dibaca terpisah (hilangkan batas 300)
-- Rules per-field untuk dokumen ruang kerja
+Berikutnya: pengingat web push, penggabungan data lintas perangkat per kebiasaan, query notifikasi belum dibaca terpisah, rules per field untuk dokumen ruang kerja.
 
 ---
 
-## 🤝 Kontribusi
+## Kontribusi
 
-0. Sapaan dashboard (`renderGreeting`) dan efek centang (`celebrate`) menghormati `prefers-reduced-motion`; pertahankan itu.
-1. Pertahankan gaya kode yang ada: helper `escapeHtml()`, `localDate()`, `toast()`, serta dialog in-app (`showAlert`, `askConfirm`, `askText`) — **jangan** memakai `alert/confirm/prompt` bawaan.
+0. Ikuti aturan antislop: tanpa em dash dan emoji dekoratif, kontras minimal 4.5:1, kontrol interaktif memakai `<button>` atau `<a href>`, angka hanya dari data nyata.
+1. Pertahankan gaya kode yang ada: helper `escapeHtml()`, `localDate()`, `toast()`, serta dialog in-app (`showAlert`, `askConfirm`, `askText`): **jangan** memakai `alert/confirm/prompt` bawaan.
 2. Semua konten pengguna wajib lewat `escapeHtml()` sebelum masuk `innerHTML`.
 3. UI baru harus kompatibel `body.dark-mode` dan breakpoint yang sudah ada; gunakan design token `var(--...)`, jangan warna hardcoded.
 4. Tidak menambah library eksternal tanpa diskusi.
 
 ---
 
-## 📄 Lisensi
+## Lisensi
 
-Proyek pembelajaran — bebas digunakan dan dimodifikasi untuk keperluan edukasi.
+Proyek pembelajaran: bebas digunakan dan dimodifikasi untuk keperluan edukasi.
 
 ---
 
 <div align="center">
-<strong>Akasha</strong> · dibuat dengan 🧡 dan Firebase
+<strong>Akasha</strong> · dibuat dengan  dan Firebase
 </div>

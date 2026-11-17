@@ -29,6 +29,7 @@ let state = {
 };
 let unsubscribers = [];
 let dashboardWorkspaces = [];
+let dashboardStatus = 'loading'; // loading | ready | error
 let dashboardNotifications = [];
 let heartbeatInterval = null;
 let activities = [], announcements = [];
@@ -266,6 +267,7 @@ function showDashboardView() {
   $('authView').classList.add('hidden');
   $('dashboardView').classList.remove('hidden');
   $('workspaceView').classList.add('hidden');
+  dashboardStatus = 'loading';
   const name = state.user?.displayName || state.user?.email || 'Pengguna';
   const initials = name.split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('');
   if ($('topbarUserName')) $('topbarUserName').textContent = name;
@@ -378,6 +380,7 @@ async function loadUserWorkspaces() {
     const ids = userSnap.exists() ? (userSnap.data().workspaceIds || []) : [];
     if (!ids.length) {
       dashboardWorkspaces = [];
+      dashboardStatus = 'ready';
       renderWorkspaceList([]); renderDashboardNotifications(); renderMiniCalendar(); renderDashboardSummary();
       return;
     }
@@ -394,9 +397,12 @@ async function loadUserWorkspaces() {
       return { id, ...wsSnap.data(), role, workerName: member.name, tasks, stats: summarizeTasks(tasks, role, member.name) };
     }));
     dashboardWorkspaces = workspaces.filter(Boolean);
+    dashboardStatus = 'ready';
     renderWorkspaceList(dashboardWorkspaces); renderDashboardNotifications(); renderMiniCalendar(); renderDashboardSummary();
   } catch (err) {
     console.error(err);
+    dashboardStatus = 'error';
+    renderGreeting();
     if (list) list.innerHTML = `<p class="empty-hint">Gagal memuat: ${escapeHtml(err.message)}</p>`;
   }
 }
@@ -423,7 +429,7 @@ function renderWorkspaceList(workspaces) {
         <div class="ws-progress-text">${progress}% selesai · ${waiting} tugas menunggu kamu</div>
       </div>
       <div class="ws-card-foot">
-        <span class="ws-code-label">KODE ${escapeHtml(code || '——')}</span>
+        <span class="ws-code-label">KODE ${escapeHtml(code || '-')}</span>
         <button type="button" class="btn-sm btn-ghost" onclick="event.stopPropagation();openWorkspace('${ws.id}')">Buka ruang</button>
       </div>
     </div>`;
@@ -555,23 +561,23 @@ function renderDashboardTaskList() {
   items.sort((a, b) => String(a.endDate || '9999').localeCompare(String(b.endDate || '9999')));
   const top = items.slice(0, 6);
   if (!top.length) {
-    el.innerHTML = '<p class="empty-hint">Belum ada tugas.</p>';
+    el.innerHTML = '<p class="empty-hint">Belum ada tugas untukmu. Buat ruang kerja atau gabung dengan kode undangan, lalu tugas dari mentor akan muncul di sini.</p>';
     return;
   }
   el.innerHTML = top.map(t => {
     const [label, cls] = statusInfo(t);
-    const due = t.endDate ? dueLabel(t) : '—';
+    const due = t.endDate ? dueLabel(t) : '-';
     const dueCls = dueLevel(t);
-    return `<div class="dash-task-row" onclick="openWorkspace('${t.workspaceId}')">
-      <div class="dash-task-info">
-        <div class="dash-task-title">${escapeHtml(t.title)}</div>
-        <div class="dash-task-meta">${escapeHtml(t.workspaceName)}${t.assignee ? ' · ' + escapeHtml(t.assignee) : ''}</div>
-      </div>
-      <div class="dash-task-badges">
+    return `<button type="button" class="dash-task-row" onclick="openWorkspace('${t.workspaceId}')">
+      <span class="dash-task-info">
+        <span class="dash-task-title">${escapeHtml(t.title)}</span>
+        <span class="dash-task-meta">${escapeHtml(t.workspaceName)}${t.assignee ? ', ' + escapeHtml(t.assignee) : ''}</span>
+      </span>
+      <span class="dash-task-badges">
         <span class="stat-pill ${cls}">${label}</span>
         ${dueCls ? `<span class="due-badge due-${dueCls}">${due}</span>` : `<span class="stat-pill s-todo">${due}</span>`}
-      </div>
-    </div>`;
+      </span>
+    </button>`;
   }).join('');
 }
 
@@ -731,7 +737,7 @@ function updateDriveStatus(liveValue = null) {
     const href = safeUrl(currentVal);
     statusEl.innerHTML = href
       ? `Folder tertaut: <a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:underline">${escapeHtml(currentVal)}</a>`
-      : 'Tautan tidak valid — harus diawali http:// atau https://';
+      : 'Tautan tidak valid: harus diawali http:// atau https://';
     statusEl.classList.toggle('linked', !!href);
   }
   if (liveValue === null && inputEl && document.activeElement !== inputEl) inputEl.value = (state.driveLink || '').trim();
@@ -772,15 +778,15 @@ function renderTasks() {
     const lv = dueLevel(task), prog = subProgress(task);
     const overdue = task.endDate && new Date(task.endDate + 'T23:59:59') < new Date() && task.status !== 'done';
     const [statusText, statusClass] = statusInfo(task);
-    const shortDesc = task.desc ? (task.desc.length > 60 ? task.desc.slice(0, 60) + '…' : task.desc) : '—';
+    const shortDesc = task.desc ? (task.desc.length > 60 ? task.desc.slice(0, 60) + '…' : task.desc) : '-';
     const diff = (task.difficulty || 'sedang').toLowerCase();
     return `<tr class="${lv ? 'row-due-' + lv : ''}" onclick="openTaskDetailModal('${task.id}')">
-      <td><div style="font-weight:600;font-size:.9rem">${escapeHtml(task.title)}${(task.attachments || []).length ? `<span class="clip-count" title="Lampiran">📎${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td>
+      <td><div style="font-weight:600;font-size:.9rem">${escapeHtml(task.title)}${(task.attachments || []).length ? `<span class="clip-count" title="Lampiran">Lampiran ${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td>
       <td class="task-desc-cell"><div class="task-desc" title="${escapeHtml(task.desc || '')}">${escapeHtml(shortDesc)}</div></td>
       <td style="font-size:.85rem;color:var(--text-secondary)">${escapeHtml(task.assignee)}</td>
       <td class="col-center"><span class="stat-pill diff-${diff}">${diff.charAt(0).toUpperCase() + diff.slice(1)}</span></td>
       <td class="col-center"><span class="stat-pill ${statusClass}">${statusText}${overdue ? ' · Terlambat' : ''}</span></td>
-      <td style="font-size:.85rem;color:${overdue ? 'var(--danger)' : 'var(--text-secondary)'};font-weight:${overdue ? 600 : 400}">${escapeHtml(task.endDate || '—')}${lv ? `<span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''}</td>
+      <td style="font-size:.85rem;color:${overdue ? 'var(--danger)' : 'var(--text-secondary)'};font-weight:${overdue ? 600 : 400}">${escapeHtml(task.endDate || '-')}${lv ? `<span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''}</td>
     </tr>`;
   }).join('');
 }
@@ -811,13 +817,13 @@ window.openTaskDetailModal = (taskId) => {
   $('detailTaskDifficulty').textContent = diff.charAt(0).toUpperCase() + diff.slice(1);
   const driveHref = safeUrl(task.reportFileLink || (task.driveSource === 'workspace' ? state.driveLink : ''));
   $('detailTaskDrive').innerHTML = driveHref
-    ? `<a href="${escapeHtml(driveHref)}" target="_blank" rel="noopener noreferrer" class="btn-drive-modal">🔗 Buka tautan Drive</a>`
+    ? `<a href="${escapeHtml(driveHref)}" target="_blank" rel="noopener noreferrer" class="btn-drive-modal">Buka tautan Drive</a>`
     : '<span style="color:var(--text-faint);font-size:.85rem">Belum ada tautan</span>';
   const revBox = $('detailRevisionBox');
   if (task.revisionNotes) { revBox.classList.remove('hidden'); $('detailRevisionNotes').textContent = task.revisionNotes; }
   else revBox.classList.add('hidden');
   const history = task.history || [];
-  const label = { laporan: '📤 Laporan', revisi: '↩ Revisi', selesai: '✅ Divalidasi' };
+  const label = { laporan: 'Laporan', revisi: 'Revisi', selesai: 'Divalidasi' };
   $('detailHistoryList').innerHTML = history.length
     ? [...history].sort((a, b) => b.at - a.at).map(h => `<div class="hist-item hist-${escapeHtml(h.type)}"><div class="hist-head"><strong>${label[h.type] || h.type}</strong> · ${escapeHtml(h.by || '')} <span>${new Date(h.at).toLocaleString('id-ID')}</span></div>${h.text ? `<div style="margin-top:4px">${escapeHtml(h.text)}</div>` : ''}</div>`).join('')
     : '<p class="empty-hint">Belum ada riwayat.</p>';
@@ -840,11 +846,11 @@ window.openTaskDetailModal = (taskId) => {
 
   const ac = $('detailActionButtons');
   if (isWorker && ['todo', 'progress'].includes(task.status)) {
-    ac.innerHTML = '<button class="btn-sm btn-solid" onclick="submitReport()">📤 Kirim laporan</button>';
+    ac.innerHTML = '<button class="btn-sm btn-solid" onclick="submitReport()">Kirim laporan</button>';
   } else if (isLead && task.status === 'review') {
-    ac.innerHTML = '<div class="action-group"><button class="btn-sm btn-warning" onclick="submitReview(true)">↩ Revisi</button><button class="btn-sm btn-success" onclick="submitReview(false)">✅ Selesai</button></div>';
+    ac.innerHTML = '<div class="action-group"><button class="btn-sm btn-warning" onclick="submitReview(true)">Revisi</button><button class="btn-sm btn-success" onclick="submitReview(false)">Selesai</button></div>';
   } else if (isLead) {
-    ac.innerHTML = `<div class="action-group"><button class="btn-sm btn-ghost" onclick="openEditTaskModal('${task.id}')">✏️ Edit</button><button class="btn-sm btn-warning" onclick="deleteTask('${task.id}')">🗑 Hapus</button></div>`;
+    ac.innerHTML = `<div class="action-group"><button class="btn-sm btn-ghost" onclick="openEditTaskModal('${task.id}')">Edit</button><button class="btn-sm btn-warning" onclick="deleteTask('${task.id}')">Hapus</button></div>`;
   } else ac.innerHTML = '';
 
   currentDetailId = task.id;
@@ -912,7 +918,7 @@ window.openEditTaskModal = (id) => {
 function loadDailyGoal() {
   const me = state.members.find(m => m.id === state.user?.uid);
   const d = $('dailyGoalDisplay'); if (!d) return;
-  d.textContent = (me && me.goalDate === localDate() && me.dailyGoal) ? `🎯 ${me.dailyGoal}` : '';
+  d.textContent = (me && me.goalDate === localDate() && me.dailyGoal) ? `${me.dailyGoal}` : '';
 }
 function setDefaultDates() {
   const s = $('startDate'), e = $('endDate');
@@ -1180,7 +1186,7 @@ function renderTaskExtras(task) {
   $('attachUploader').classList.toggle('hidden', !canEdit);
   $('detailAttachList').innerHTML = files.length ? files.map(f => {
     const href = safeUrl(f.url), canDel = isLead || f.uid === state.user.uid;
-    return `<div class="attach-item"><span>🔗</span><div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div>${canDel ? `<button type="button" class="icon-del" title="Hapus lampiran" onclick="deleteAttachment('${task.id}','${f.id}')">×</button>` : ''}</div>`;
+    return `<div class="attach-item"><div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div>${canDel ? `<button type="button" class="icon-del" title="Hapus lampiran" onclick="deleteAttachment('${task.id}','${f.id}')">×</button>` : ''}</div>`;
   }).join('') : '<p class="empty-hint">Belum ada lampiran.</p>';
 }
 function afterTasksUpdate() {
@@ -1241,7 +1247,7 @@ function renderAnnouncements() {
   const isLead = state.role === 'mentor';
   const list = [...announcements].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   el.innerHTML = list.length ? list.map(a => `<article class="announce-item ${a.pinned ? 'pinned' : ''}">
-    <div class="announce-head"><h4>${a.pinned ? '📌 ' : ''}${escapeHtml(a.title)}</h4>
+    <div class="announce-head"><h4>${a.pinned ? 'Disematkan: ' : ''}${escapeHtml(a.title)}</h4>
     ${isLead ? `<div class="announce-actions"><button type="button" class="btn-sm btn-ghost" onclick="togglePinAnnouncement('${a.id}')">${a.pinned ? 'Lepas pin' : 'Sematkan'}</button><button type="button" class="btn-sm btn-ghost" onclick="editAnnouncement('${a.id}')">Edit</button><button type="button" class="btn-sm btn-warning" onclick="deleteAnnouncement('${a.id}')">Hapus</button></div>` : ''}</div>
     <p>${escapeHtml(a.body)}</p><small>${escapeHtml(a.by || 'Lead')} · ${fmtTime(a.createdAt)}</small></article>`).join('')
     : '<p class="empty-hint">Belum ada pengumuman dari mentor.</p>';
@@ -1495,14 +1501,20 @@ function setupEventListeners() {
   $('announceForm').addEventListener('submit', postAnnouncement);
 }
 
-/* ══════════ SAPAAN & PERAYAAN KECIL ══════════ */
+/* ══════════ SAPAAN DASHBOARD ══════════
+   Angka hanya dari data nyata (tugas, kebiasaan). Tiga status: memuat, siap, gagal (R-27). */
 function renderGreeting() {
   const title = $('greetTitle'); if (!title) return;
-  const first = ((state.user?.displayName || '').trim().split(/\s+/)[0]) || 'kamu';
+  const text = $('welcomeText'), facts = $('greetFacts'), ring = $('greetRing');
+  const first = ((state.user?.displayName || '').trim().split(/\s+/)[0]) || '';
   const hr = new Date().getHours();
   const sapa = hr < 11 ? 'Selamat pagi' : hr < 15 ? 'Selamat siang' : hr < 18 ? 'Selamat sore' : 'Selamat malam';
-  title.textContent = `${sapa}, ${first}`;
+  title.textContent = first ? `${sapa}, ${first}` : sapa;
 
+  if (dashboardStatus === 'error') {
+    text.textContent = 'Ringkasan gagal dimuat. Periksa koneksi, lalu buka ulang Dashboard.';
+    facts.innerHTML = ''; ring.innerHTML = ''; return;
+  }
   const habits = (prodData?.habits || []).filter(x => !x.archived);
   const done = habits.filter(x => x.doneToday).length;
   const pct = habits.length ? Math.round(done / habits.length * 100) : 0;
@@ -1518,50 +1530,32 @@ function renderGreeting() {
   });
 
   let msg;
-  if (late) msg = `Ada ${late} tugas terlambat. Selesaikan satu dulu, sisanya terasa lebih ringan.`;
-  else if (soon) msg = `${soon} tugas jatuh tempo minggu ini. Kamu masih punya waktu.`;
+  if (dashboardStatus === 'loading') msg = 'Memuat ringkasan tugas dan kebiasaanmu.';
+  else if (late) msg = `${late} tugas sudah lewat tenggat. Mulai dari yang paling lama.`;
+  else if (soon) msg = `${soon} tugas jatuh tempo dalam 7 hari ke depan.`;
   else if (habits.length && done < habits.length) msg = `Tinggal ${habits.length - done} kebiasaan lagi untuk hari ini.`;
-  else if (habits.length) msg = 'Semua kebiasaan hari ini beres. Kerja bagus!';
-  else msg = 'Mulai dari satu kebiasaan kecil hari ini.';
-  if ($('welcomeText')) $('welcomeText').textContent = msg;
+  else if (habits.length) msg = 'Semua kebiasaan hari ini sudah tercentang.';
+  else msg = 'Belum ada kebiasaan. Tambah satu di bawah untuk mulai mencatat.';
+  text.textContent = msg;
 
-  const chips = $('greetChips');
-  if (chips) {
-    chips.innerHTML = [
-      best ? `<span class="chip chip-fire">🔥 ${best} hari beruntun</span>` : '',
-      soon ? `<span class="chip">📅 ${soon} tenggat minggu ini</span>` : '',
-      habits.length ? `<span class="chip">✅ ${done} dari ${habits.length} kebiasaan</span>` : ''
-    ].join('');
-  }
-  const ring = $('greetRing');
-  if (ring) {
-    const C = 2 * Math.PI * 34;
-    ring.setAttribute('aria-label', `Progres kebiasaan hari ini: ${pct} persen`);
-    ring.innerHTML = `<svg viewBox="0 0 80 80" aria-hidden="true"><circle class="ring-bg" cx="40" cy="40" r="34"/><circle class="ring-fg" cx="40" cy="40" r="34" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct / 100)).toFixed(1)}"/></svg><span class="ring-num">${pct}%</span>`;
-  }
-}
+  const items = [];
+  if (best) items.push(`Streak terpanjang ${best} hari`);
+  if (dashboardStatus === 'ready' && soon) items.push(`${soon} tenggat minggu ini`);
+  if (habits.length) items.push(`${done} dari ${habits.length} kebiasaan`);
+  facts.innerHTML = items.map(i => `<li>${i}</li>`).join('');
 
-function celebrate() {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  const src = document.activeElement?.getBoundingClientRect?.();
-  const x = src && src.width ? src.left + src.width / 2 : innerWidth / 2;
-  const y = src && src.height ? src.top + src.height / 2 : innerHeight / 3;
-  const colors = ['#FF6A1F', '#6D5BD0', '#16A34A', '#F5B301', '#EC4899'];
-  for (let i = 0; i < 16; i++) {
-    const p = document.createElement('span');
-    const a = (Math.PI * 2 * i) / 16 + Math.random() * .4, d = 46 + Math.random() * 56;
-    p.className = 'confetti';
-    p.style.cssText = `left:${x}px;top:${y}px;background:${colors[i % colors.length]};--dx:${Math.cos(a) * d}px;--dy:${Math.sin(a) * d - 20}px`;
-    document.body.appendChild(p);
-    setTimeout(() => p.remove(), 900);
-  }
+  if (!habits.length) { ring.innerHTML = ''; ring.classList.add('hidden'); return; }
+  ring.classList.remove('hidden');
+  const C = 2 * Math.PI * 34;
+  ring.setAttribute('aria-label', `Progres kebiasaan hari ini: ${pct} persen`);
+  ring.innerHTML = `<svg viewBox="0 0 80 80" width="96" height="96" aria-hidden="true"><circle class="ring-bg" cx="40" cy="40" r="34"/><circle class="ring-fg" cx="40" cy="40" r="34" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct / 100)).toFixed(1)}"/></svg><span class="ring-num" aria-hidden="true">${pct}%</span>`;
 }
 
 /* ══════════ PERSONAL PRODUCTIVITY v3 (habits · mood · insight) ══════════ */
 const PROD_KEY = 'akasha_productivity_v3';
 const PROD_KEY_V2 = 'akasha_productivity_v2';
 const MOOD_EMOJI = { 1: '😢', 2: '😟', 3: '😐', 4: '😊', 5: '😄' };
-const CAT_ICONS = { sehat: '💪', kerja: '💼', belajar: '📚' };
+const CAT_ICONS = { sehat: '', kerja: '', belajar: '' }; // tanpa emoji: ikon kebiasaan memakai huruf awal nama
 const MILESTONES = [7, 21, 30, 66, 100];
 let prodData = null;
 let selectedMood = null;
@@ -1769,7 +1763,7 @@ function rollOverDay() {
   }
   // reset today mood flags if lastRoll was not today
   if (prodData.lastRollDate !== today) {
-    // keep moodToday only if it was for today — it's not, so clear
+    // keep moodToday only if it was for today (it's not, so clear)
     const lastMood = prodData.moodHistory.find(m => m.date === prodData.lastRollDate);
     if (prodData.moodToday != null && prodData.lastRollDate !== today) {
       // already in history presumably
@@ -1816,7 +1810,7 @@ function renderHabits() {
     list.innerHTML = '<p class="empty-hint" style="padding:.5rem 0">Belum ada kebiasaan. Tekan “Tambah kebiasaan” untuk mulai.</p>';
   } else {
     list.innerHTML = habits.map(h => {
-      const icon = h.icon || CAT_ICONS[h.category] || '✨';
+      const icon = h.icon || (h.name || '#').trim().charAt(0).toUpperCase();
       const milestone = MILESTONES.filter(m => h.streak >= m).pop();
       const celebrated = milestone && (prodData.celebratedMilestones[h.id] || []).includes(milestone);
       let progress = '';
@@ -1842,18 +1836,18 @@ function renderHabits() {
       return `
       <div class="habit-block" data-id="${h.id}">
         <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${h.id}">
-          <span class="habit-check" data-toggle="${h.id}">${h.doneToday ? '✓' : ''}</span>
-          <span class="habit-icon">${icon}</span>
-          <span class="habit-name">${escapeHtml(h.name)}</span>
+          <button type="button" class="habit-check" data-toggle="${h.id}" aria-pressed="${h.doneToday}" aria-label="Tandai ${escapeHtml(h.name)} selesai hari ini">${h.doneToday ? '✓' : ''}</button>
+          <span class="habit-icon">${escapeHtml(icon)}</span>
+          <button type="button" class="habit-name" aria-expanded="${open}">${escapeHtml(h.name)}</button>
           ${progress}
-          <span class="habit-days">${h.streak} hari${milestone ? ' <span class="milestone-pill">🏅 ' + milestone + '</span>' : ''}</span>
-          <button type="button" class="habit-edit-btn" data-edit="${h.id}" title="Edit">✎</button>
+          <span class="habit-days">${h.streak} hari${milestone ? ' <span class="milestone-pill">Milestone ' + milestone + '</span>' : ''}</span>
+          <button type="button" class="habit-edit-btn" data-edit="${h.id}" aria-label="Edit ${escapeHtml(h.name)}">Edit</button>
         </div>
         <div class="habit-detail ${open ? '' : 'hidden'}" data-detail="${h.id}">
           <div class="habit-detail-stats">
             <span>${done30}/30 hari · ${Math.round(done30 / 30 * 100)}%</span>
             <span>Streak ${h.streak} · terpanjang ${h.longest}</span>
-            <span>❄ Freeze: ${h.freezes}</span>
+            <span>Freeze: ${h.freezes}</span>
           </div>
           <div class="contrib-graph habit-mini-graph">${cells.join('')}</div>
         </div>
@@ -1914,7 +1908,6 @@ function toggleHabit(id) {
   h.doneToday = !h.doneToday;
   if (!h.history) h.history = {};
   if (h.doneToday) {
-    celebrate();
     h.history[today] = true;
     h.streak += 1;
     if (h.streak > h.longest) h.longest = h.streak;
@@ -1924,7 +1917,7 @@ function toggleHabit(id) {
         if (!prodData.celebratedMilestones[h.id]) prodData.celebratedMilestones[h.id] = [];
         if (!prodData.celebratedMilestones[h.id].includes(m)) {
           prodData.celebratedMilestones[h.id].push(m);
-          toast(`🏅 Streak ${m} hari: ${h.name}!`, 'success');
+          toast(`Streak ${m} hari: ${h.name}!`, 'success');
         }
       }
     });
@@ -1939,7 +1932,8 @@ function toggleHabit(id) {
   cell.level = Math.min(4, Math.ceil((doneCount / Math.max(1, active.length)) * 4));
   saveProd();
   renderHabits();
-  toast(h.doneToday ? `✓ ${h.name}` : `Dibatalkan: ${h.name}`, 'success');
+  renderGreeting();
+  toast(h.doneToday ? `Selesai: ${h.name}` : `Dibatalkan: ${h.name}`, 'success');
 }
 
 function openHabitModal(id) {
@@ -1991,7 +1985,7 @@ function renderMoodUI() {
   prodData.moodStreak = streak;
   const pill = $('moodStreakPill');
   if (pill) {
-    if (streak > 0) { pill.textContent = `🔥 ${streak} hari beruntun`; pill.classList.remove('hidden'); }
+    if (streak > 0) { pill.textContent = `Streak ${streak} hari beruntun`; pill.classList.remove('hidden'); }
     else pill.classList.add('hidden');
   }
 
@@ -2173,11 +2167,11 @@ function openRecapModal() {
   body.innerHTML = `
     <p class="recap-month">${escapeHtml(monthName)}</p>
     <ul class="recap-list">
-      <li>Rata-rata mood: <strong>${moods.length ? avg.toFixed(1) + ' ' + (MOOD_EMOJI[Math.round(avg)] || '') : '—'}</strong></li>
-      <li>Hari terbaik: <strong>${best ? best.date + ' ' + (MOOD_EMOJI[best.mood] || '') : '—'}</strong></li>
-      <li>Hari terendah: <strong>${worst ? worst.date + ' ' + (MOOD_EMOJI[worst.mood] || '') : '—'}</strong></li>
-      <li>Tag tersering: <strong>${topTag ? escapeHtml(topTag[0]) + ' (' + topTag[1] + ')' : '—'}</strong></li>
-      <li>Penyelesaian kebiasaan: <strong>${habitTotal ? Math.round(habitDone / habitTotal * 100) + '%' : '—'} (${habitDone}/${habitTotal})</strong></li>
+      <li>Rata-rata mood: <strong>${moods.length ? avg.toFixed(1) + ' ' + (MOOD_EMOJI[Math.round(avg)] || '') : '-'}</strong></li>
+      <li>Hari terbaik: <strong>${best ? best.date + ' ' + (MOOD_EMOJI[best.mood] || '') : '-'}</strong></li>
+      <li>Hari terendah: <strong>${worst ? worst.date + ' ' + (MOOD_EMOJI[worst.mood] || '') : '-'}</strong></li>
+      <li>Tag tersering: <strong>${topTag ? escapeHtml(topTag[0]) + ' (' + topTag[1] + ')' : '-'}</strong></li>
+      <li>Penyelesaian kebiasaan: <strong>${habitTotal ? Math.round(habitDone / habitTotal * 100) + '%' : '-'} (${habitDone}/${habitTotal})</strong></li>
       <li>Streak terpanjang: <strong>${longest} hari</strong></li>
     </ul>`;
   window.__recapText = `Rekap ${monthName}\nMood rata-rata: ${avg.toFixed(1)}\nHari terbaik: ${best ? best.date : '-'}\nHari terendah: ${worst ? worst.date : '-'}\nTag: ${topTag ? topTag[0] : '-'}\nKebiasaan: ${habitDone}/${habitTotal}\nStreak terpanjang: ${longest} hari`;
@@ -2194,7 +2188,7 @@ function setupProductivityEvents() {
     if (!name) return;
     const id = $('habitEditId').value;
     const category = $('habitCategory')?.value || 'kerja';
-    const icon = ($('habitIcon')?.value || '').trim() || CAT_ICONS[category] || '✨';
+    const icon = ($('habitIcon')?.value || '').trim() || '';
     const st = $('habitScheduleType')?.value || 'daily';
     let schedule = { type: 'daily' };
     if (st === 'weekly') schedule = { type: 'weekly', target: Number($('habitWeeklyTarget')?.value || 3) };

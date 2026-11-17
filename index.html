@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Akasha — Ruang Kerja Tim</title>
+<title>Akasha: Ruang Kerja Tim</title>
 <meta name="description" content="Akasha mengelola tugas, divisi, dan tenggat tim Anda dalam satu ruang kerja." />
 <meta name="theme-color" content="#F97316" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -19,7 +19,6 @@
 <div id="authView" class="auth-gate-modal auth-split">
   <div class="auth-hero">
     <div class="auth-glass">
-      <span class="hero-eyebrow">Akasha · Ruang Kerja Tim</span>
       <h2>Satu ruang untuk tugas, divisi, dan tenggat.</h2>
       <p>Mentor membagikan tugas ke seluruh tim, per divisi, atau per orang. Anggota mengirim laporan, mentor memvalidasi. Semua tercatat.</p>
       <ul class="hero-facts">
@@ -87,7 +86,7 @@
     <nav class="sidebar-menu" aria-label="Navigasi utama">
       <button class="menu-item active" id="dashboardNavBtn" title="Dashboard"><span class="menu-icon" aria-hidden="true">▦</span><span class="menu-label">Dashboard</span></button>
       <button class="menu-item" id="myWorkspacesNavBtn" title="Ruang kerja saya"><span class="menu-icon" aria-hidden="true">▣</span><span class="menu-label">Ruang Kerja</span></button>
-      <button class="menu-item" id="notificationsNavBtn" title="Notifikasi" aria-label="Notifikasi"><span class="menu-icon" aria-hidden="true">◔</span><span class="menu-label">Notifikasi</span><span class="nav-badge hidden" id="notifBadge"></span></button>
+      <button class="menu-item" id="notificationsNavBtn" title="Notifikasi" aria-label="Notifikasi"><span class="menu-icon" aria-hidden="true"><svg class="icon-bell" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></span><span class="menu-label">Notifikasi</span><span class="nav-badge hidden" id="notifBadge"></span></button>
       <button class="menu-item" id="accountBtn" title="Pengaturan akun"><span class="menu-icon" aria-hidden="true">⚙</span><span class="menu-label">Akun</span></button>
     </nav>
     <div class="sidebar-footer">
@@ -98,7 +97,7 @@
   <header class="dashboard-topbar">
     <div class="topbar-left"><h2 class="topbar-title" id="dashboardPageTitle">Dashboard</h2></div>
     <div class="topbar-right">
-      <button class="topbar-icon-btn" id="notificationsNavBtnTop" aria-label="Buka notifikasi"><span aria-hidden="true">◔</span></button>
+      <button class="topbar-icon-btn" id="notificationsNavBtnTop" aria-label="Buka notifikasi"><svg class="icon-bell" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></button>
       <button class="topbar-profile-badge" id="accountBtnTop" title="Pengaturan akun">
         <span class="avatar-circle" id="topbarUserAvatar">A</span>
         <span class="user-info-text"><span class="user-name" id="topbarUserName">Pengguna</span><span class="user-role" id="topbarUserRole">Member</span></span>
@@ -111,14 +110,14 @@
 
       <!-- ── HOME ── -->
       <section id="dashboardHomePanel">
-        <div class="greet-hero" id="greetHero">
+        <section class="greet-hero" id="greetHero" aria-labelledby="greetTitle">
           <div class="greet-copy">
-            <h2 class="greet-title" id="greetTitle">Halo!</h2>
-            <p class="greet-text" id="welcomeText">Ringkasan tugas, tenggat, dan kebiasaanmu ada di bawah.</p>
-            <div class="greet-chips" id="greetChips"></div>
+            <h2 class="greet-title" id="greetTitle">Selamat datang</h2>
+            <p class="greet-text" id="welcomeText" role="status">Memuat ringkasan tugas dan kebiasaanmu.</p>
+            <ul class="greet-facts" id="greetFacts"></ul>
           </div>
           <div class="greet-ring" id="greetRing" role="img" aria-label="Progres kebiasaan hari ini"></div>
-        </div>
+        </section>
 
         <!-- Soft reminder (productivity) -->
         <div class="welcome-alert reminder-banner hidden" id="prodReminderBanner">
@@ -131,6 +130,17 @@
 
         <div class="dash-grid">
           <div class="dash-main">
+            <!-- Daftar tugas: keputusan utama di dashboard, jadi tampil pertama -->
+            <div class="card card-primary">
+              <div class="section-head">
+                <div>
+                  <h3>Tugas terdekat</h3>
+                  <p class="subtitle">Urut dari tenggat paling dekat, lintas ruang kerja.</p>
+                </div>
+              </div>
+              <div id="dashboardTaskList" class="dash-task-list"></div>
+            </div>
+
             <!-- Kebiasaan harian -->
             <div class="card">
               <div class="section-head">
@@ -172,17 +182,6 @@
               <div id="insightBody" class="insight-body">
                 <p class="empty-hint">Belum cukup data</p>
               </div>
-            </div>
-
-            <!-- Daftar tugas ringkas -->
-            <div class="card">
-              <div class="section-head">
-                <div>
-                  <h3>Daftar tugas</h3>
-                  <p class="subtitle">Urut dari tenggat terdekat.</p>
-                </div>
-              </div>
-              <div id="dashboardTaskList" class="dash-task-list"></div>
             </div>
 
             <!-- Notifikasi (tetap ada) -->
@@ -301,15 +300,15 @@
         <button class="ws-nav-item active" id="tabTaskView"><span aria-hidden="true">▦</span> <span id="tabTaskLabel">Tugas Saya</span></button>
         <button class="ws-nav-item" id="tabCalendarView"><span aria-hidden="true">▤</span> Kalender Tenggat</button>
         <button class="ws-nav-item" id="tabActivityView"><span aria-hidden="true">◷</span> Aktivitas</button>
-        <button class="ws-nav-item" id="tabAnnouncementView"><span aria-hidden="true">✦</span> Pengumuman</button>
+        <button class="ws-nav-item" id="tabAnnouncementView">Pengumuman</button>
         <button class="ws-nav-item" id="tabTeamView"><span aria-hidden="true">◍</span> Rekan Tim</button>
       </div>
 
       <div class="ws-sidebar-section" id="mentorPanel">
         <div class="ws-sidebar-label">Pengaturan mentor</div>
         <button class="ws-nav-item" id="tabDivisionView"><span aria-hidden="true">◎</span> Manajemen Divisi</button>
-        <button class="ws-nav-item" id="changeCodeBtn"><span aria-hidden="true">⚿</span> Ganti Kode Undangan</button>
-        <button class="ws-nav-item ws-danger" id="deleteWorkspaceBtn"><span aria-hidden="true">🗑</span> Hapus Ruang Kerja</button>
+        <button class="ws-nav-item" id="changeCodeBtn">Ganti Kode Undangan</button>
+        <button class="ws-nav-item ws-danger" id="deleteWorkspaceBtn"><span aria-hidden="true"></span>Hapus Ruang Kerja</button>
       </div>
 
       <div class="ws-sidebar-bottom">
@@ -377,7 +376,7 @@
               <textarea id="taskDesc" class="field" rows="3" placeholder="Jelaskan hasil yang Anda harapkan."></textarea>
             </div>
             <div class="form-group">
-              <label for="taskSubtasks">Sub-tugas — satu per baris</label>
+              <label for="taskSubtasks">Sub-tugas (satu per baris)</label>
               <textarea id="taskSubtasks" class="field" rows="3" placeholder="Riset referensi&#10;Buat draf&#10;Serahkan untuk ditinjau"></textarea>
             </div>
             <button type="submit" class="btn-primary">Bagikan tugas</button>
@@ -499,7 +498,7 @@
   <div class="modal-content modal-content-lg">
     <button class="close-modal" data-close="taskDetailModal" aria-label="Tutup detail">×</button>
     <h2 id="detailTaskTitle" class="modal-title">Detail tugas</h2>
-    <p class="modal-meta">Ditugaskan kepada <strong id="detailTaskAssignee">—</strong></p>
+    <p class="modal-meta">Ditugaskan kepada <strong id="detailTaskAssignee">-</strong></p>
     <div class="detail-section detail-pills"><span id="detailTaskStatus" class="stat-pill"></span><span id="detailTaskDifficulty" class="stat-pill"></span></div>
     <div class="detail-section"><span class="detail-label">Periode</span><div id="detailTaskDates" class="detail-dates"></div></div>
     <div class="detail-section"><span class="detail-label">Tautan Google Drive</span><div id="detailTaskDrive"></div></div>
@@ -535,7 +534,7 @@
     </div>
     <div id="detailReviewBox" class="hidden detail-form-block">
       <h4>Ulasan mentor</h4>
-      <div class="form-group"><label for="reviewNotes">Catatan — wajib untuk revisi</label><textarea id="reviewNotes" class="field" rows="3" placeholder="Tulis bagian yang perlu diperbaiki."></textarea></div>
+      <div class="form-group"><label for="reviewNotes">Catatan (wajib untuk revisi)</label><textarea id="reviewNotes" class="field" rows="3" placeholder="Tulis bagian yang perlu diperbaiki."></textarea></div>
       <div id="reviewError" class="form-error hidden"></div>
     </div>
     <div id="detailActionButtons"></div>
@@ -549,7 +548,7 @@
     <p class="modal-meta">Anda otomatis menjadi mentor di ruang ini.</p>
     <form id="createWorkspaceForm">
       <div class="form-group"><label for="newWorkspaceName">Nama ruang kerja *</label><input type="text" id="newWorkspaceName" class="field" placeholder="Contoh: Tim Produksi 2026" required /></div>
-      <div class="form-group"><label for="newWorkspaceCode">Kode undangan — 6 karakter *</label><input type="text" id="newWorkspaceCode" class="field code-field" maxlength="6" placeholder="ABC123" required /></div>
+      <div class="form-group"><label for="newWorkspaceCode">Kode undangan (6 karakter) *</label><input type="text" id="newWorkspaceCode" class="field code-field" maxlength="6" placeholder="ABC123" required /></div>
       <div class="form-group"><label for="newWorkspaceDrive">Folder Google Drive</label><input type="url" id="newWorkspaceDrive" class="field" placeholder="https://drive.google.com/… (opsional)" /></div>
       <button type="submit" id="createWorkspaceSubmitBtn" class="btn-primary">Buat ruang kerja</button>
     </form>
@@ -607,7 +606,7 @@
       <input type="hidden" id="editMemberId" />
       <div class="form-group"><label for="editMemberNameDisplay">Anggota</label><input type="text" id="editMemberNameDisplay" class="field" readonly /></div>
       <div class="form-group"><label for="editMemberRole">Peran</label>
-        <select id="editMemberRole" class="field" data-enhance><option value="worker">Member — mengerjakan tugas</option><option value="mentor">Lead — membuat &amp; memvalidasi</option></select>
+        <select id="editMemberRole" class="field" data-enhance><option value="worker">Member: mengerjakan tugas</option><option value="mentor">Lead: membuat &amp; memvalidasi</option></select>
       </div>
       <div class="form-group"><label for="editMemberDivision">Divisi</label><select id="editMemberDivision" class="field" data-enhance></select></div>
       <button type="submit" class="btn-primary">Simpan perubahan</button>
@@ -663,7 +662,7 @@
         </div>
         <div class="form-group">
           <label for="habitIcon">Ikon (emoji)</label>
-          <input type="text" id="habitIcon" class="field" placeholder="✨" maxlength="4" />
+          <input type="text" id="habitIcon" class="field" placeholder="Huruf atau simbol (opsional)" maxlength="4" />
         </div>
       </div>
       <div class="form-group">

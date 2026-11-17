@@ -1009,66 +1009,116 @@ body.theme-playful .menu-item.active::before{background:#F43F5E}
   .mood-month-stats{font-size:.72rem}
 }
 
-/* ═══════════ TEMA v4 — dusk violet · ember orange (lebih hangat, tetap rapi) ═══════════ */
+/* ═══════════ ARAH DESAIN (antislop, mode "saat mengerjakan") ═══════════
+   Design Read: dashboard kerja tim untuk usia 17-27, hangat dan rapi.
+   Dial: ENERGY 2 / RHYTHM 2 / MOTION 1.
+   Palet: netral warm-stone + satu aksen ember. Hijau dan merah hanya untuk status.
+   Font: Plus Jakarta Sans. Alasan: dirancang untuk Jakarta, bentuk huruf ramah dan terbaca di layar kecil.
+   Fokus per layar: kartu sapaan (progres hari ini), lalu tugas terdekat.
+   Motif identitas: cincin progres dan huruf awal sebagai ikon, keduanya dari data pengguna. */
+
 :root{
-  --stone-50:#F7F6FB;--stone-100:#EFEDF7;--stone-200:#E3E0EF;--stone-300:#CFCBE0;--stone-400:#9E99B8;
-  --stone-500:#726D8C;--stone-600:#565172;--stone-700:#403B5A;--stone-800:#2A2640;--stone-900:#1C1930;--stone-950:#0F0D1C;
-  --success:#15803D;--success-bg:#ECFDF3;--success-border:#BBF7D0;
-  --lilac:#6D5BD0;--lilac-soft:#EEEBFB;
-  --radius:14px;--radius-sm:11px;--radius-lg:20px;--radius-xl:28px;
-  --shadow-sm:0 1px 3px rgba(42,38,64,.07),0 1px 2px rgba(42,38,64,.04);
-  --shadow-md:0 8px 20px rgba(42,38,64,.08),0 2px 6px rgba(42,38,64,.04);
-  --shadow-lg:0 20px 48px rgba(42,38,64,.14),0 6px 12px rgba(42,38,64,.05);
+  /* Aksen dipakai gelap (ember-700) agar teks putih di atasnya lulus 4.5:1 (5.18:1). */
+  --accent:var(--ember-700);--accent-hover:var(--ember-800);--accent-soft:var(--ember-50);--accent-border:var(--ember-200);
+  --primary:var(--accent);--primary-hover:var(--accent-hover);--primary-soft:var(--accent-soft);--primary-border:var(--accent-border);
+  --on-accent:#fff;--on-success:#fff;--on-danger:#fff;--on-warning:#fff;
+  --success:#166534;--success-bg:#F0FDF4;--success-border:#BBF7D0;
+  --warning:#B45309;--danger:#B91C1C;--info:#92400E;--online:#15803D;
+  --text-faint:var(--stone-500);
+  --hero-bg:var(--stone-900);--hero-fg:#fff;--hero-fg2:var(--stone-200);--hero-ring:var(--ember-400);--hero-ring-bg:var(--stone-700);
+  --shadow-ember:none;
 }
 body.dark-mode{
-  --bg:#0F0D1C;--surface:#17142A;--surface-elevated:#1E1A36;--surface-hover:#251F40;
-  --border:#2E2850;--border-subtle:#231E3F;
-  --text:#F6F4FC;--text-secondary:#BDB8D6;--text-muted:#8F89AD;--text-faint:#625C82;
-  --success:#4ADE80;--success-bg:rgba(74,222,128,.12);--success-border:rgba(74,222,128,.3);
-  --lilac:#A99BFF;--lilac-soft:rgba(169,155,255,.14);
+  --on-accent:var(--stone-900);--on-success:#052E16;--on-danger:var(--stone-900);--on-warning:var(--stone-900);
+  --text-muted:#A39B94;--text-faint:#A39B94;
+  --success:#4ADE80;--warning:var(--ember-400);
+  --hero-bg:var(--surface-elevated);--hero-fg:var(--text);--hero-fg2:var(--text-secondary);--hero-ring:var(--ember-400);--hero-ring-bg:var(--border);
 }
-body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;line-height:1.6}
-h1,h2,h3,h4{letter-spacing:-.025em;font-weight:700}
-.card{border-radius:var(--radius-lg);padding:1.6rem;box-shadow:var(--shadow-sm)}
-.btn-primary,button,.menu-item{transition:transform 120ms ease,box-shadow var(--transition),background var(--transition)}
-.btn-primary:active{transform:scale(.97)}
-.btn-primary:hover{box-shadow:var(--shadow-ember)}
-input,select,textarea{border-radius:var(--radius-sm)}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft)}
-.menu-item.active{background:var(--lilac-soft);color:var(--lilac)}
-.menu-item.active::before{background:var(--lilac)}
 
-/* Sapaan: satu momen utama di dashboard */
-.greet-hero{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding:1.75rem 2rem;margin-bottom:1.25rem;
-  border-radius:var(--radius-xl);color:#fff;
-  background:linear-gradient(125deg,#4B3FA8 0%,#6D5BD0 55%,#FF6A1F 135%);box-shadow:var(--shadow-lg)}
-.greet-title{font-size:clamp(1.5rem,3.2vw,2.1rem);font-weight:800;line-height:1.15}
-.greet-text{margin-top:.5rem;max-width:46ch;font-size:1rem;color:rgba(255,255,255,.9)}
-.greet-chips{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:1.1rem}
-.chip{display:inline-flex;align-items:center;gap:.35rem;padding:.35rem .8rem;border-radius:var(--radius-full);font-size:.8rem;font-weight:600;
-  background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.22)}
-.chip-fire{background:rgba(255,106,31,.9);border-color:transparent}
+/* Dasar */
+body{font-family:'Plus Jakarta Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif}
+/* Kursor tangan di semua kontrol aktif, sekali di lapisan dasar (R-39) */
+a[href],button,summary,select,label[for],[role="button"],[role="tab"],[role="option"],input[type="checkbox"],input[type="radio"]{cursor:pointer}
+button:disabled,[aria-disabled="true"],input:disabled,select:disabled{cursor:not-allowed}
+::-webkit-scrollbar-thumb,::-webkit-scrollbar-thumb:hover{background:var(--stone-400)}
+
+/* Datar, tanpa gradien, glow, atau bayangan massal. Bayangan hanya untuk modal, menu, dan kartu sapaan (R-01, R-12, R-13). */
+.btn-primary,.btn-workspace-action.primary,.brand-badge,.avatar-circle,.brand-mark,.team-avatar{background:var(--accent);color:var(--on-accent)}
+.btn-primary:hover,.btn-workspace-action.primary:hover{background:var(--accent-hover);box-shadow:none}
+.btn-primary:active{transform:scale(.98)}
+.progress-fill,.ws-progress-fill{background:var(--accent)}
+.progress-fill.full{background:var(--success)}
+.card,.summary-item,.workspace-card{box-shadow:none}
+.card:hover,.workspace-card:hover{box-shadow:none}
+.summary-item::before,.workspace-card::before{display:none}
+.skip-link,.select-option[aria-selected="true"],.btn-sm.btn-solid,.ws-code-copy:hover,.ws-back-btn.ws-back-dashboard:hover,.cal-nav button:hover,.btn-drive-modal:hover,.habit-cat-chip.active{background:var(--accent);color:var(--on-accent);border-color:var(--accent)}
+.skip-link:focus{color:var(--on-accent)}
+.btn-sm.btn-danger,.nav-badge{background:var(--danger);color:var(--on-danger);border-color:var(--danger)}
+.btn-sm.btn-warning:hover{background:var(--warning);color:var(--on-warning);border-color:var(--warning)}
+.btn-sm.btn-success:hover{background:var(--success);color:var(--on-success);border-color:var(--success)}
+.welcome-alert{background:var(--accent-soft);border:1px solid var(--accent-border)}
+body.dark-mode .welcome-alert{background:var(--accent-soft)}
+.welcome-dot{display:none} /* titik ini tidak menandai status apa pun */
+.team-avatar .presence-dot.online{animation:none} /* status online nyata, tanpa denyut tanpa henti (R-19) */
+
+/* Auth: satu blok gelap solid, tanpa orb, grid titik, atau kaca (R-01, R-07, R-10) */
+.auth-hero{background:var(--stone-900)}
+.auth-hero::after{display:none}
+.auth-glass{backdrop-filter:none;-webkit-backdrop-filter:none;background:transparent;border:1px solid var(--stone-700);box-shadow:none}
+.hero-facts strong{color:var(--ember-300)}
+
+/* Kartu sapaan: titik fokus dashboard. Satu-satunya blok gelap di layar terang, jadi hierarkinya jelas. */
+.greet-hero{display:flex;align-items:center;justify-content:space-between;gap:1.5rem;margin-bottom:1.25rem;padding:1.75rem 2rem;
+  border-radius:var(--radius-xl);background:var(--hero-bg);color:var(--hero-fg);border:1px solid var(--hero-bg)}
+body.dark-mode .greet-hero{border-color:var(--border)}
+.greet-title{font-size:clamp(1.4rem,3vw,2rem);font-weight:800;line-height:1.15}
+.greet-text{margin-top:.5rem;max-width:48ch;font-size:1rem;color:var(--hero-fg2)}
+.greet-facts{list-style:none;display:flex;flex-wrap:wrap;gap:.4rem 1.25rem;margin-top:1rem;font-size:.85rem;font-weight:600;color:var(--hero-fg2)}
+.greet-facts:empty{display:none}
 .greet-ring{position:relative;flex:none;width:96px;height:96px}
 .greet-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
 .greet-ring circle{fill:none;stroke-width:8;stroke-linecap:round}
-.ring-bg{stroke:rgba(255,255,255,.22)}
-.ring-fg{stroke:#fff;transition:stroke-dashoffset 700ms cubic-bezier(.4,0,.2,1)}
+.ring-bg{stroke:var(--hero-ring-bg)}
+.ring-fg{stroke:var(--hero-ring);transition:stroke-dashoffset 500ms ease} /* menjawab centang: cincin bergerak saat kebiasaan ditandai */
 .ring-num{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;font-size:1.15rem}
 
-/* Kartu statistik lebih hidup */
-.summary-item{border-radius:var(--radius-lg);border:1px solid var(--border);background:var(--surface);box-shadow:var(--shadow-sm)}
-.summary-item .num{font-weight:800}
-.stat-success .num{color:var(--success)}
+/* Ringkasan angka: satu strip, bukan empat kartu setara. Angka hanya data nyata. */
+.dash-stats{gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.dash-stats .summary-item{border:0;border-radius:0;padding:.85rem 1.1rem;transform:none;box-shadow:none}
+.dash-stats .summary-item .num{font-size:1.35rem;font-weight:700;color:var(--text)}
+.dash-stats .stat-success .num{color:var(--success)}
+.dash-stats .stat-warning .num{color:var(--warning)}
+.dash-stats .stat-danger .num{color:var(--danger)}
+.card-primary{border-color:var(--stone-300)}
+body.dark-mode .card-primary{border-color:var(--border)}
 
-/* Umpan balik centang */
-.confetti{position:fixed;z-index:6000;width:8px;height:8px;border-radius:2px;pointer-events:none;animation:pop 800ms ease-out forwards}
-@keyframes pop{to{transform:translate(var(--dx),var(--dy)) rotate(300deg);opacity:0}}
-.empty-hint{color:var(--text-muted);font-size:.92rem}
+/* Kontrol asli (button) menggantikan div/span yang bisa diklik (R-39) */
+.dash-task-row{width:100%;background:none;border-top:0;border-left:0;border-right:0;font:inherit;color:inherit;text-align:left}
+.dash-task-info,.dash-task-title,.dash-task-meta{display:block}
+.habit-check{position:relative;background:transparent;padding:0;font-family:inherit}
+.habit-check::after{content:"";position:absolute;inset:-11px} /* area ketuk 44px */
+.habit-item.done .habit-check{background:var(--success);border-color:var(--success);color:var(--on-success)}
+.habit-name{background:none;border:0;padding:0;font-family:inherit;color:inherit;text-align:left}
+.habit-edit-btn{opacity:1;font-size:.78rem;font-weight:600;padding:.3rem .5rem;color:var(--text-muted);font-family:inherit} /* terlihat tanpa hover, agar terjangkau sentuhan dan keyboard */
+.habit-icon{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-sm);background:var(--accent-soft);color:var(--accent);font-size:.8rem;font-weight:800}
 
-@media(max-width:768px){
+/* Tema Playful: dibuat datar. Satu aksen mawar, tanpa pelangi, orb, atau gradien (R-01, R-29). */
+body.theme-playful{--bg:#FFF7ED;--accent:#BE123C;--accent-hover:#9F1239;--accent-soft:#FFF1F2;--accent-border:#FECDD3;
+  --success:#166534;--warning:#B45309;--danger:#B91C1C;--info:#92400E;--border:#E7D5D5;--border-subtle:#F3E8E8;
+  --shadow-sm:none;--shadow-md:none;--shadow-ember:none;background:var(--bg)}
+body.theme-playful .btn-primary,body.theme-playful .btn-sm.btn-solid,body.theme-playful .brand-mark,body.theme-playful .avatar-circle,body.theme-playful .brand-badge{background:var(--accent);color:#fff}
+body.theme-playful .card{box-shadow:none}
+.theme-swatch-light{background:var(--stone-50)}
+.theme-swatch-dark{background:var(--stone-900)}
+.theme-swatch-playful{background:#BE123C}
+
+/* Layar sempit: tata letak sendiri, area ketuk 44px, jarak antar target (R-03) */
+@media (max-width:768px){
   .greet-hero{padding:1.25rem;border-radius:var(--radius-lg);gap:1rem}
   .greet-ring{width:72px;height:72px}.ring-num{font-size:.95rem}
+  .btn-sm,.habit-cat-chip,.habit-edit-btn,.topbar-icon-btn,.mood-btn,.cal-nav button{min-height:44px;min-width:44px}
+  .habit-cat-filters{gap:.5rem}
+  .habit-name,.mood-tag-chip{min-height:44px;display:inline-flex;align-items:center}
+  .dash-stats{grid-template-columns:repeat(2,1fr)}
 }
-@media(prefers-reduced-motion:reduce){.ring-fg{transition:none}.confetti{display:none}}
-.auth-hero{background:radial-gradient(ellipse 70% 55% at 18% 22%,rgba(109,91,208,.55) 0%,transparent 62%),radial-gradient(ellipse 60% 50% at 84% 78%,rgba(255,106,31,.4) 0%,transparent 58%),#1C1930}
-.hero-eyebrow,.hero-facts strong{color:#FFB48A}
+@media (prefers-reduced-motion:reduce){.ring-fg{transition:none}}
