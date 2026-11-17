@@ -1,1007 +1,762 @@
 <!DOCTYPE html>
-<html lang="id" data-theme="light">
+<html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Akasha — Ruang Kerja &amp; Manajemen Tugas</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css" />
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Akasha — Ruang Kerja Tim</title>
+<meta name="description" content="Akasha mengelola tugas, divisi, dan tenggat tim Anda dalam satu ruang kerja." />
+<meta name="theme-color" content="#F97316" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="style.css" />
 </head>
 <body>
 
-  <!-- ═══ AUTH SCREEN ═══ -->
-  <section id="auth-view" class="auth-shell">
-    <div class="auth-split">
-      <!-- Brand Panel -->
-      <aside class="auth-brand-panel">
-        <div class="brand-lockup">
-          <div class="brand-mark">A</div>
-          <span class="brand-wordmark">Akasha</span>
-        </div>
-
-        <div class="brand-copy">
-          <h1>Kelola tugas tim dan ritme harian dengan jernih.</h1>
-          <p>
-            Pantau pembagian tugas tim, susun kebiasaan harian, dan catat evaluasi diri dalam satu platform terpadu.
-          </p>
-        </div>
-
-        <ul class="brand-highlights">
-          <li>
-            <span class="highlight-icon" aria-hidden="true">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-            </span>
-            <span>Pantau progres tugas &amp; beban kerja tim secara langsung</span>
-          </li>
-          <li>
-            <span class="highlight-icon" aria-hidden="true">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
-            </span>
-            <span>Pelacak kebiasaan &amp; jurnal mood terintegrasi</span>
-          </li>
-          <li>
-            <span class="highlight-icon" aria-hidden="true">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </span>
-            <span>Tenggat waktu tersinkronisasi untuk seluruh anggota</span>
-          </li>
-        </ul>
-
-        <div class="brand-footer">
-          <span>Workspace Kolaborasi &amp; Produktivitas</span>
-        </div>
-      </aside>
-
-      <!-- Auth Form Panel -->
-      <main class="auth-form-panel">
-        <div class="auth-card">
-          <div class="mobile-brand">
-            <div class="brand-mark">A</div>
-            <span class="brand-wordmark dark">Akasha</span>
-          </div>
-
-          <div class="auth-header">
-            <h2 id="auth-heading">Masuk ke akun Anda</h2>
-            <p id="auth-subheading">Masukkan email dan kata sandi untuk melanjutkan ke ruang kerja.</p>
-          </div>
-
-          <div class="auth-tabs" role="tablist" aria-label="Metode autentikasi">
-            <button type="button" class="auth-tab active" data-auth-mode="login" role="tab" aria-selected="true">
-              Masuk
-            </button>
-            <button type="button" class="auth-tab" data-auth-mode="register" role="tab" aria-selected="false">
-              Buat Akun
-            </button>
-          </div>
-
-          <div id="auth-alert" class="alert-banner hidden" role="alert"></div>
-
-          <!-- Login Form -->
-          <form id="login-form" class="auth-form" novalidate>
-            <div class="field">
-              <label for="login-email">Alamat Email</label>
-              <input id="login-email" type="email" autocomplete="email" placeholder="nama@perusahaan.com" required />
-            </div>
-
-            <div class="field">
-              <div class="label-row">
-                <label for="login-password">Kata Sandi</label>
-                <button type="button" id="forgot-password-btn" class="text-link">Lupa kata sandi?</button>
-              </div>
-              <div class="password-wrap">
-                <input id="login-password" type="password" autocomplete="current-password" placeholder="Masukkan kata sandi" required />
-                <button type="button" class="toggle-pass" data-target="login-password" aria-label="Tampilkan kata sandi">Tampilkan</button>
-              </div>
-            </div>
-
-            <button type="submit" id="login-submit-btn" class="btn btn-primary btn-block">
-              Masuk ke Akasha
-            </button>
-          </form>
-
-          <!-- Register Form -->
-          <form id="register-form" class="auth-form hidden" novalidate>
-            <div class="field">
-              <label for="register-name">Nama Lengkap</label>
-              <input id="register-name" type="text" autocomplete="name" placeholder="Contoh: Raka Pratama" required />
-            </div>
-
-            <div class="field">
-              <label for="register-email">Alamat Email</label>
-              <input id="register-email" type="email" autocomplete="email" placeholder="nama@perusahaan.com" required />
-            </div>
-
-            <div class="field">
-              <label for="register-password">Kata Sandi</label>
-              <div class="password-wrap">
-                <input id="register-password" type="password" autocomplete="new-password" placeholder="Minimal 6 karakter" minlength="6" required />
-                <button type="button" class="toggle-pass" data-target="register-password" aria-label="Tampilkan kata sandi">Tampilkan</button>
-              </div>
-            </div>
-
-            <button type="submit" id="register-submit-btn" class="btn btn-primary btn-block">
-              Buat Akun Baru
-            </button>
-          </form>
-
-          <div class="divider"><span>atau lanjutkan dengan</span></div>
-
-          <button type="button" id="google-login-btn" class="btn btn-outline btn-block">
-            <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
-              <path fill="#EA4335" d="M12 5c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.77 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.86-3c-.98.66-2.23 1.06-3.42 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            </svg>
-            Masuk dengan Google
-          </button>
-        </div>
-      </main>
-    </div>
-  </section>
-
-  <!-- ═══ APP SHELL ═══ -->
-  <div id="app-view" class="app-shell hidden">
-    <!-- Top Header -->
-    <header class="topbar">
-      <div class="topbar-inner">
-        <div class="topbar-left">
-          <button type="button" id="brand-home-btn" class="topbar-brand" title="Kembali ke Dasbor">
-            <span class="brand-mark sm">A</span>
-            <span class="brand-wordmark dark sm">Akasha</span>
-          </button>
-
-          <nav class="main-nav" aria-label="Navigasi utama">
-            <button type="button" class="nav-pill active" data-route="dashboard">
-              Dasbor
-            </button>
-            <button type="button" class="nav-pill" data-route="workspace">
-              Ruang Kerja
-            </button>
-          </nav>
-        </div>
-
-        <div class="topbar-right">
-          <div class="theme-quick-switch" aria-label="Pilih tema tampilan">
-            <button type="button" class="theme-chip active" data-theme-select="light" title="Tema Terang">Terang</button>
-            <button type="button" class="theme-chip" data-theme-select="dark" title="Tema Gelap">Gelap</button>
-            <button type="button" class="theme-chip" data-theme-select="playful" title="Tema Playful">Playful</button>
-          </div>
-
-          <button type="button" id="notif-bell-btn" class="icon-btn" title="Notifikasi" aria-label="Notifikasi">
-            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            <span id="notif-badge" class="notif-dot hidden">0</span>
-          </button>
-
-          <button type="button" id="open-profile-btn" class="profile-chip" title="Pengaturan Akun &amp; Tema">
-            <span id="topbar-avatar" class="avatar sm">U</span>
-            <span id="topbar-user-name" class="profile-chip-name">Memuat...</span>
-          </button>
-
-          <button type="button" id="logout-btn" class="btn btn-ghost btn-sm">Keluar</button>
-        </div>
-      </div>
-    </header>
-
-    <!-- Global Toast / Status Banner -->
-    <div id="global-toast" class="toast hidden" role="status" aria-live="polite"></div>
-
-    <!-- ═══ VIEW 1: PERSONAL DASHBOARD ═══ -->
-    <main id="dashboard-view" class="page-container">
-      <!-- Dark Hero Banner (Personal Dashboard) -->
-      <section class="hero-banner" aria-label="Ringkasan Harian Pribadi">
-        <div class="hero-banner-content">
-          <div class="hero-kicker" id="dash-hero-date">SELASA, 17 NOVEMBER 2026</div>
-          <h1 class="hero-title" id="dash-greeting">Halo! Siap menuntaskan target hari ini?</h1>
-          <p class="hero-subtitle" id="dash-subtitle">Pantau progres tugas lintas ruang kerja dan tenggat waktu terdekat Anda.</p>
-        </div>
-
-        <div class="hero-metrics">
-          <div class="hero-ring-wrap" title="Persentase tugas selesai">
-            <svg class="hero-ring-svg" width="68" height="68" viewBox="0 0 68 68">
-              <circle class="hero-ring-track" cx="34" cy="34" r="28" stroke-width="6" fill="none" />
-              <circle id="dash-hero-ring-fill" class="hero-ring-fill" cx="34" cy="34" r="28" stroke-width="6" fill="none" stroke-dasharray="175.93" stroke-dashoffset="175.93" />
-            </svg>
-            <span id="dash-hero-percent" class="hero-ring-label">0%</span>
-          </div>
-
-          <div class="hero-kpi-card">
-            <span id="dash-hero-action-count" class="hero-kpi-value">0</span>
-            <span class="hero-kpi-label">Perlu Tindakan</span>
-          </div>
-        </div>
-      </section>
-
-      <div class="page-header-row" style="margin-top: 20px;">
-        <div>
-          <h2 class="section-heading-main">Ikhtisar Produktivitas &amp; Kesejahteraan</h2>
-          <p class="page-subtitle">Ringkasan seluruh tugas, kebiasaan harian, dan suasana hati Anda.</p>
-        </div>
-        <div class="header-actions">
-          <button type="button" id="dash-new-ws-btn" class="btn btn-primary">
-            + Ruang Kerja Baru
-          </button>
-          <button type="button" id="dash-join-ws-btn" class="btn btn-outline">
-            Gabung Kode
-          </button>
-        </div>
-      </div>
-
-      <!-- Summary Stat Cards (4 Columns) -->
-      <section class="stats-grid" aria-label="Ringkasan statistik">
-        <article class="stat-card">
-          <span class="stat-label">Ruang Kerja Aktif</span>
-          <strong id="stat-workspaces" class="stat-value">0</strong>
-          <span class="stat-meta">Tim yang Anda ikuti</span>
-        </article>
-        <article class="stat-card">
-          <span class="stat-label">Tugas Aktif</span>
-          <strong id="stat-active-tasks" class="stat-value">0</strong>
-          <span class="stat-meta">Belum selesai / berjalan</span>
-        </article>
-        <article class="stat-card">
-          <span class="stat-label">Kebiasaan Hari Ini</span>
-          <strong id="stat-habits-today" class="stat-value">0/0</strong>
-          <span class="stat-meta">Target rutinitas selesai</span>
-        </article>
-        <article class="stat-card">
-          <span class="stat-label">Tenggat Terdekat</span>
-          <strong id="stat-due-soon" class="stat-value">0</strong>
-          <span class="stat-meta">Dalam 7 hari ke depan</span>
-        </article>
-      </section>
-
-      <!-- Main Dashboard Grid -->
-      <div class="dashboard-grid">
-        <!-- Left Column -->
-        <div class="stack-col">
-          <!-- Habit Tracker Card -->
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Kebiasaan Harian</h2>
-                <p id="habit-date-subtitle" class="card-subtitle">Bangun konsistensi langkah kecil setiap hari.</p>
-              </div>
-              <div class="header-actions">
-                <button type="button" id="open-monthly-recap-btn" class="btn btn-ghost btn-sm">Rekap Bulanan</button>
-                <button type="button" id="open-add-habit-btn" class="btn btn-primary btn-sm">+ Kebiasaan</button>
-              </div>
-            </div>
-
-            <div id="habit-list" class="habit-list"></div>
-
-            <!-- 14-Week Habit Contribution Grid -->
-            <div class="habit-heatmap-box">
-              <div class="heatmap-header">
-                <span class="heatmap-title">Konsistensi 14 Minggu Terakhir</span>
-                <div class="heatmap-legend">
-                  <span>Kurang</span>
-                  <i class="hm-cell l0"></i>
-                  <i class="hm-cell l1"></i>
-                  <i class="hm-cell l2"></i>
-                  <i class="hm-cell l3"></i>
-                  <i class="hm-cell l4"></i>
-                  <span>Penuh</span>
-                </div>
-              </div>
-              <div id="habit-heatmap-grid" class="habit-heatmap-grid"></div>
-            </div>
-          </section>
-
-          <!-- Correlation Insight Card -->
-          <section class="card insight-card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Insight Kebiasaan &amp; Mood</h2>
-                <p class="card-subtitle">Analisis otomatis dari pola 30 hari terakhir Anda.</p>
-              </div>
-              <span class="badge-pill">Refleksi</span>
-            </div>
-            <div id="correlation-insight-body" class="insight-body">
-              <p class="muted-text">Catat kebiasaan dan suasana hati selama beberapa hari untuk melihat korelasi personal Anda.</p>
-            </div>
-          </section>
-
-          <!-- My Tasks Overview Card -->
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Daftar Tugas Lintas Ruang Kerja</h2>
-                <p class="card-subtitle">Klik tugas untuk membuka ruang kerjanya secara langsung.</p>
-              </div>
-              <select id="dash-task-filter" class="select-sm" aria-label="Filter tugas dasbor">
-                <option value="all">Semua Tugas</option>
-                <option value="pending">Belum Selesai</option>
-                <option value="review">Perlu Tinjauan</option>
-                <option value="overdue">Lewat Tenggat</option>
-              </select>
-            </div>
-            <div id="dash-task-list" class="clean-list"></div>
-          </section>
-        </div>
-
-        <!-- Right Column -->
-        <div class="stack-col">
-          <!-- Notifications Card -->
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Notifikasi Terbaru</h2>
-                <p class="card-subtitle">Tugas baru, balasan diskusi, &amp; status tinjauan.</p>
-              </div>
-              <button type="button" id="mark-all-notifs-btn" class="btn btn-ghost btn-sm">Tandai dibaca</button>
-            </div>
-            <div id="dash-notif-list" class="clean-list"></div>
-          </section>
-
-          <!-- Daily Mood & Journal Card -->
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Suasana Hati &amp; Jurnal Hari Ini</h2>
-                <p class="card-subtitle">Bagaimana perasaan Anda hari ini?</p>
-              </div>
-              <button type="button" id="open-mood-history-btn" class="btn btn-ghost btn-sm">Riwayat</button>
-            </div>
-
-            <div class="mood-selector" role="group" aria-label="Pilih suasana hati">
-              <button type="button" class="mood-btn" data-mood="5" title="Luar Biasa">
-                <span class="mood-emoji">😄</span>
-                <span class="mood-label">Luar Biasa</span>
-              </button>
-              <button type="button" class="mood-btn" data-mood="4" title="Baik">
-                <span class="mood-emoji">🙂</span>
-                <span class="mood-label">Baik</span>
-              </button>
-              <button type="button" class="mood-btn" data-mood="3" title="Biasa">
-                <span class="mood-emoji">😐</span>
-                <span class="mood-label">Biasa</span>
-              </button>
-              <button type="button" class="mood-btn" data-mood="2" title="Lelah">
-                <span class="mood-emoji">😔</span>
-                <span class="mood-label">Lelah</span>
-              </button>
-              <button type="button" class="mood-btn" data-mood="1" title="Berat">
-                <span class="mood-emoji">😫</span>
-                <span class="mood-label">Berat</span>
-              </button>
-            </div>
-
-            <div class="field" style="margin-top: 12px;">
-              <label for="daily-journal-input" class="sr-only">Catatan jurnal singkat</label>
-              <textarea id="daily-journal-input" rows="2" placeholder="Tulis satu hal yang disyukuri atau catatan singkat hari ini..."></textarea>
-            </div>
-            <div class="row-end" style="margin-top: 8px;">
-              <span id="mood-saved-hint" class="muted-xs"></span>
-              <button type="button" id="save-mood-journal-btn" class="btn btn-primary btn-sm">Simpan Catatan</button>
-            </div>
-
-            <!-- 30-Day Mood Trend SVG -->
-            <div class="mood-chart-wrap">
-              <div class="heatmap-header">
-                <span class="heatmap-title">Grafik Mood 30 Hari</span>
-                <span id="mood-avg-label" class="muted-xs">Rata-rata: -</span>
-              </div>
-              <div id="mood-trend-chart" class="mood-trend-chart"></div>
-            </div>
-          </section>
-
-          <!-- Upcoming Deadlines Card -->
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Tenggat 7 Hari ke Depan</h2>
-                <p class="card-subtitle">Jadwal penyelesaian terdekat.</p>
-              </div>
-            </div>
-            <div id="dash-deadlines-list" class="clean-list"></div>
-          </section>
-
-          <!-- Workspace Quick Switcher Card -->
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Ruang Kerja Anda</h2>
-                <p class="card-subtitle">Pilih ruang kerja untuk mengelola tim &amp; tugas.</p>
-              </div>
-            </div>
-            <div id="dash-workspaces-preview" class="clean-list"></div>
-          </section>
-        </div>
-      </div>
-    </main>
-
-    <!-- ═══ VIEW 2: WORKSPACE HUB & BOARD ═══ -->
-    <main id="workspace-view" class="page-container hidden">
-      <!-- Workspace Selector Bar -->
-      <section class="workspace-bar">
-        <div class="ws-selector-group">
-          <label for="workspace-select" class="sr-only">Pilih Ruang Kerja</label>
-          <select id="workspace-select" class="select-ws">
-            <option value="">Pilih Ruang Kerja...</option>
-          </select>
-
-          <button type="button" id="copy-invite-code-btn" class="invite-pill hidden" title="Klik untuk menyalin kode undangan">
-            <span>Kode:</span>
-            <strong id="ws-invite-code-text">------</strong>
-          </button>
-        </div>
-
-        <div class="ws-bar-actions">
-          <button type="button" id="ws-open-create-btn" class="btn btn-primary btn-sm">+ Buat Ruang</button>
-          <button type="button" id="ws-open-join-btn" class="btn btn-outline btn-sm">Gabung Kode</button>
-          <button type="button" id="ws-leave-btn" class="btn btn-ghost btn-sm text-danger hidden">Keluar</button>
-          <button type="button" id="ws-delete-btn" class="btn btn-ghost btn-sm text-danger hidden">Hapus Ruang</button>
-        </div>
-      </section>
-
-      <!-- Empty Workspace Onboarding State -->
-      <section id="workspace-empty-state" class="empty-hero card">
-        <div class="empty-hero-inner">
-          <h2>Belum ada ruang kerja yang dipilih</h2>
-          <p>
-            Buat ruang kerja baru sebagai Mentor untuk membagikan tugas ke anggota, atau gabung ke ruang kerja yang sudah ada menggunakan kode 6 karakter.
-          </p>
-          <div class="empty-hero-actions">
-            <button type="button" id="empty-create-ws-btn" class="btn btn-primary">Buat Ruang Kerja Baru</button>
-            <button type="button" id="empty-join-ws-btn" class="btn btn-outline">Gabung dengan Kode</button>
-          </div>
-
-          <div id="inline-ws-forms" class="inline-ws-forms">
-            <!-- Create WS Card -->
-            <form id="create-ws-form" class="sub-panel">
-              <h3>Buat Ruang Kerja Baru</h3>
-              <div class="field">
-                <label for="new-ws-name">Nama Ruang Kerja</label>
-                <input id="new-ws-name" type="text" placeholder="Contoh: Tim Desain &amp; Produk" required />
-              </div>
-              <div class="field">
-                <label for="new-ws-desc">Deskripsi Singkat (Opsional)</label>
-                <input id="new-ws-desc" type="text" placeholder="Tujuan atau ruang lingkup tim" />
-              </div>
-              <button type="submit" class="btn btn-primary btn-block">Buat &amp; Masuk</button>
-            </form>
-
-            <!-- Join WS Card -->
-            <form id="join-ws-form" class="sub-panel">
-              <h3>Gabung Ruang Kerja</h3>
-              <div class="field">
-                <label for="join-ws-code">Kode Undangan (6 Karakter)</label>
-                <input id="join-ws-code" type="text" maxlength="6" placeholder="ABCDEF" style="text-transform: uppercase; letter-spacing: 0.14em; font-weight: 700;" required />
-              </div>
-              <p class="muted-xs" style="margin-bottom: 14px;">
-                Anda akan bergabung sebagai Anggota dan dapat langsung melihat tugas yang dibagikan.
-              </p>
-              <button type="submit" class="btn btn-outline btn-block">Gabung Sekarang</button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <!-- Active Workspace Content -->
-      <div id="workspace-active-content" class="hidden">
-        <!-- Dark Hero Banner (Workspace Dashboard) -->
-        <section class="hero-banner" aria-label="Ringkasan Ruang Kerja">
-          <div class="hero-banner-content">
-            <div class="hero-kicker" id="ws-hero-kicker">RUANG KERJA · SELASA, 17 NOVEMBER 2026</div>
-            <h1 class="hero-title" id="ws-hero-title">Dasbor Mentor — Ruang Kerja</h1>
-            <p class="hero-subtitle" id="ws-hero-subtitle">Pantau distribusi tugas tim, tinjau laporan masuk, dan kelola tenggat.</p>
-          </div>
-
-          <div class="hero-metrics">
-            <div class="hero-ring-wrap" title="Progres penyelesaian tugas tim">
-              <svg class="hero-ring-svg" width="68" height="68" viewBox="0 0 68 68">
-                <circle class="hero-ring-track" cx="34" cy="34" r="28" stroke-width="6" fill="none" />
-                <circle id="ws-hero-ring-fill" class="hero-ring-fill" cx="34" cy="34" r="28" stroke-width="6" fill="none" stroke-dasharray="175.93" stroke-dashoffset="175.93" />
-              </svg>
-              <span id="ws-hero-percent" class="hero-ring-label">0%</span>
-            </div>
-
-            <div class="hero-kpi-card">
-              <span id="ws-hero-done-ratio" class="hero-kpi-value">0/0</span>
-              <span class="hero-kpi-label">Selesai</span>
-            </div>
-
-            <div class="hero-kpi-card">
-              <span id="ws-hero-pending-count" class="hero-kpi-value">0</span>
-              <span class="hero-kpi-label">Tertunda</span>
-            </div>
-          </div>
-        </section>
-
-        <!-- Sub-navigation Tabs -->
-        <div class="ws-tabs" role="tablist">
-          <button type="button" class="ws-tab active" data-ws-tab="tasks">Papan Tugas</button>
-          <button type="button" class="ws-tab" data-ws-tab="calendar">Kalender Tenggat</button>
-          <button type="button" class="ws-tab" data-ws-tab="activity">Aktivitas</button>
-          <button type="button" class="ws-tab" data-ws-tab="announcements">Pengumuman</button>
-          <button type="button" class="ws-tab" data-ws-tab="members">Rekan Tim</button>
-          <button type="button" class="ws-tab hidden" id="ws-tab-divisions-btn" data-ws-tab="divisions">Manajemen Divisi</button>
-        </div>
-
-        <!-- TAB 1: TASKS BOARD -->
-        <div id="ws-panel-tasks" class="ws-panel">
-          <!-- Target Hari Ini Card -->
-          <section class="card" style="margin-bottom: 18px;">
-            <div class="card-header-row" style="margin-bottom: 12px;">
-              <div>
-                <h2 class="card-title">Target hari ini</h2>
-                <p class="card-subtitle">Tulis fokus Anda. Target tersimpan untuk tanggal hari ini.</p>
-              </div>
-              <span id="ws-goal-status-badge" class="badge-pill hidden">Tersimpan</span>
-            </div>
-            <div class="inline-form-row">
-              <input id="ws-daily-goal-input" type="text" placeholder="Contoh: tuntaskan revisi layout halaman utama" />
-              <button type="button" id="ws-save-goal-btn" class="btn btn-primary">Simpan target</button>
-            </div>
-            <p id="ws-daily-goal-display" class="muted-xs" style="margin-top: 8px;">Belum ada target tersimpan untuk hari ini.</p>
-          </section>
-
-          <!-- Mentor Create Task Panel (Collapsible) -->
-          <section id="mentor-create-task-card" class="card hidden" style="margin-bottom: 20px;">
-            <div class="card-header-row" style="margin-bottom: 0;">
-              <div>
-                <h2 class="card-title">Buat tugas baru</h2>
-                <p class="card-subtitle">Setiap tugas dibuat per penerima saat Anda memilih divisi atau seluruh tim.</p>
-              </div>
-              <button type="button" id="toggle-create-task-form-btn" class="btn btn-ghost btn-sm">Sembunyikan Form</button>
-            </div>
-
-            <form id="create-task-form" class="task-form-grid" style="margin-top: 16px;">
-              <div class="field span-2">
-                <label for="task-title-input">Judul tugas *</label>
-                <input id="task-title-input" type="text" placeholder="Apa yang harus dikerjakan?" required />
-              </div>
-
-              <div class="field">
-                <label for="task-assignee-select">Ditugaskan kepada *</label>
-                <select id="task-assignee-select" required>
-                  <option value="ALL">Seluruh anggota</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="task-difficulty-select">Tingkat kesulitan</label>
-                <select id="task-difficulty-select">
-                  <option value="low">Rendah</option>
-                  <option value="medium" selected>Sedang</option>
-                  <option value="high">Tinggi</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="task-drive-mode">Sumber tautan Drive</label>
-                <select id="task-drive-mode">
-                  <option value="workspace">Gunakan folder Drive utama ruang kerja</option>
-                  <option value="custom">Tautan folder khusus untuk tugas ini</option>
-                  <option value="none">Tanpa folder Google Drive</option>
-                </select>
-              </div>
-
-              <div class="field" id="task-drive-link-wrap">
-                <label for="task-drive-url-input">Tautan folder Google Drive</label>
-                <div class="inline-form-row">
-                  <input id="task-drive-url-input" type="url" placeholder="https://drive.google.com/..." />
-                  <button type="button" id="save-ws-drive-btn" class="btn btn-primary btn-sm">Simpan</button>
-                </div>
-                <span id="task-drive-hint" class="muted-xs">Folder Drive utama aktif.</span>
-              </div>
-
-              <div class="field">
-                <label for="task-start-input">Tanggal mulai</label>
-                <input id="task-start-input" type="date" />
-              </div>
-
-              <div class="field">
-                <label for="task-due-input">Tanggal waktu</label>
-                <input id="task-due-input" type="date" />
-              </div>
-
-              <div class="field span-2">
-                <label for="task-desc-input">Instruksi &amp; kriteria selesai</label>
-                <textarea id="task-desc-input" rows="2" placeholder="Jelaskan hasil yang Anda harapkan."></textarea>
-              </div>
-
-              <div class="field span-2">
-                <label for="task-subtasks-input">Sub-tugas — satu per baris</label>
-                <textarea id="task-subtasks-input" rows="3" placeholder="Riset referensi&#10;Buat draf&#10;Serahkan untuk ditinjau"></textarea>
-              </div>
-
-              <div class="span-2">
-                <button type="submit" id="create-task-submit-btn" class="btn btn-primary btn-block">Bagikan tugas</button>
-              </div>
-            </form>
-          </section>
-
-          <!-- Papan Tugas Container -->
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Papan tugas</h2>
-                <p class="card-subtitle">Klik kartu atau baris untuk membuka detail, sub-tugas, dan diskusi.</p>
-              </div>
-              <div class="view-mode-switch" role="group" aria-label="Mode tampilan papan tugas">
-                <button type="button" class="view-mode-btn" data-board-view="kanban">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
-                  Kanban
-                </button>
-                <button type="button" class="view-mode-btn active" data-board-view="table">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-                  Tabel
-                </button>
-              </div>
-            </div>
-
-            <!-- Filter Bar -->
-            <div class="filter-bar">
-              <input id="task-search-input" type="search" class="search-input" placeholder="Cari judul atau instruksi..." />
-              <select id="task-filter-status" class="select-sm">
-                <option value="all">Semua status</option>
-                <option value="todo">Belum dimulai</option>
-                <option value="in_progress">Berjalan</option>
-                <option value="in_review">Siap direviu</option>
-                <option value="revision">Revisi</option>
-                <option value="done">Selesai</option>
-              </select>
-              <select id="task-filter-difficulty" class="select-sm">
-                <option value="all">Semua kesul...</option>
-                <option value="high">Tinggi</option>
-                <option value="medium">Sedang</option>
-                <option value="low">Rendah</option>
-              </select>
-              <select id="task-filter-division" class="select-sm">
-                <option value="all">Semua divisi</option>
-              </select>
-              <select id="task-filter-assignee" class="select-sm">
-                <option value="all">Semua angg...</option>
-              </select>
-              <select id="task-sort-select" class="select-sm">
-                <option value="newest">Terbaru</option>
-                <option value="due_asc">Tenggat Terdekat</option>
-                <option value="difficulty_desc">Kesulitan Tertinggi</option>
-              </select>
-              <button type="button" id="quick-review-filter-btn" class="btn btn-outline btn-sm">
-                ! Butuh Tinjauan
-              </button>
-            </div>
-
-            <!-- Overdue / Urgent Notice Banner inside Board -->
-            <div id="board-urgent-banner" class="board-notice-banner hidden"></div>
-
-            <!-- Kanban Grid View -->
-            <div id="tasks-board-grid" class="tasks-grid hidden"></div>
-
-            <!-- Table View -->
-            <div id="tasks-table-wrap" class="tasks-table-wrap">
-              <table class="tasks-table">
-                <thead>
-                  <tr>
-                    <th>JUDUL TUGAS</th>
-                    <th>INSTRUKSI</th>
-                    <th>ANGGOTA</th>
-                    <th>KESULITAN</th>
-                    <th>STATUS</th>
-                    <th>TENGGAT</th>
-                  </tr>
-                </thead>
-                <tbody id="tasks-table-body"></tbody>
-              </table>
-            </div>
-          </section>
-        </div>
-
-        <!-- TAB 2: DEADLINE CALENDAR -->
-        <div id="ws-panel-calendar" class="ws-panel hidden">
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 id="calendar-month-title" class="card-title">Kalender Tenggat</h2>
-                <p class="card-subtitle">Klik tanggal untuk melihat daftar tugas yang jatuh tempo.</p>
-              </div>
-              <div class="header-actions">
-                <button type="button" id="cal-prev-btn" class="btn btn-outline btn-sm">&larr; Sebelumnya</button>
-                <button type="button" id="cal-today-btn" class="btn btn-ghost btn-sm">Hari Ini</button>
-                <button type="button" id="cal-next-btn" class="btn btn-outline btn-sm">Berikutnya &rarr;</button>
-              </div>
-            </div>
-
-            <div class="calendar-weekdays">
-              <span>Min</span><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span>
-            </div>
-            <div id="calendar-days-grid" class="calendar-grid"></div>
-
-            <div id="calendar-day-detail" class="calendar-detail-box">
-              <h3 id="calendar-selected-date-label">Pilih tanggal pada kalender</h3>
-              <div id="calendar-selected-tasks" class="clean-list"></div>
-            </div>
-          </section>
-        </div>
-
-        <!-- TAB 3: ACTIVITY FEED -->
-        <div id="ws-panel-activity" class="ws-panel hidden">
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Linimasa Aktivitas Tim</h2>
-                <p class="card-subtitle">Catatan pembuatan tugas, perubahan status, diskusi, dan pengumuman.</p>
-              </div>
-            </div>
-            <div id="activity-feed-list" class="clean-list"></div>
-          </section>
-        </div>
-
-        <!-- TAB 4: ANNOUNCEMENTS -->
-        <div id="ws-panel-announcements" class="ws-panel hidden">
-          <section id="mentor-announcement-box" class="card hidden" style="margin-bottom: 18px;">
-            <h2 class="card-title">Buat Pengumuman Ruang Kerja</h2>
-            <form id="create-announcement-form" style="margin-top: 12px;">
-              <div class="field">
-                <label for="ann-title-input">Judul Pengumuman</label>
-                <input id="ann-title-input" type="text" placeholder="Contoh: Jadwal Presentasi Sprint Jumat" required />
-              </div>
-              <div class="field">
-                <label for="ann-body-input">Isi Pengumuman</label>
-                <textarea id="ann-body-input" rows="3" placeholder="Tulis informasi penting untuk seluruh rekan tim..." required></textarea>
-              </div>
-              <div class="row-end">
-                <button type="submit" class="btn btn-primary btn-sm">Terbitkan Pengumuman</button>
-              </div>
-            </form>
-          </section>
-
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Papan Pengumuman</h2>
-                <p class="card-subtitle">Informasi resmi dari Mentor ruang kerja.</p>
-              </div>
-            </div>
-            <div id="announcements-list" class="clean-list"></div>
-          </section>
-        </div>
-
-        <!-- TAB 5: MEMBERS -->
-        <div id="ws-panel-members" class="ws-panel hidden">
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Anggota &amp; Rekan Tim</h2>
-                <p class="card-subtitle">Status kehadiran real-time dan pembagian divisi.</p>
-              </div>
-            </div>
-            <div id="members-list" class="members-grid"></div>
-          </section>
-        </div>
-
-        <!-- TAB 6: DIVISIONS (MENTOR ONLY) -->
-        <div id="ws-panel-divisions" class="ws-panel hidden">
-          <section class="card">
-            <div class="card-header-row">
-              <div>
-                <h2 class="card-title">Manajemen Divisi</h2>
-                <p class="card-subtitle">Kelompokkan anggota ke dalam divisi untuk memudahkan distribusi tugas.</p>
-              </div>
-            </div>
-
-            <form id="create-division-form" class="inline-form-row" style="margin: 14px 0 20px;">
-              <input id="new-division-name" type="text" placeholder="Nama divisi baru (misal: Desain UI, Backend)" required />
-              <select id="new-division-color" class="select-sm">
-                <option value="#ea580c">Oranye</option>
-                <option value="#2563eb">Biru</option>
-                <option value="#16a34a">Hijau</option>
-                <option value="#9333ea">Ungu</option>
-                <option value="#0d9488">Toska</option>
-                <option value="#dc2626">Merah</option>
-              </select>
-              <button type="submit" class="btn btn-primary btn-sm">+ Tambah Divisi</button>
-            </form>
-
-            <div id="divisions-list" class="clean-list"></div>
-          </section>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- ═══ MODAL 1: TASK DETAIL, SUBTASKS, ATTACHMENTS & DISCUSSION ═══ -->
-  <div id="task-detail-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="modal-task-title">
-    <div class="modal-card modal-lg">
-      <div class="modal-header">
-        <div>
-          <div class="modal-badges" id="modal-task-badges"></div>
-          <h2 id="modal-task-title">Judul Tugas</h2>
-        </div>
-        <button type="button" class="icon-btn" data-close-modal="task-detail-modal" aria-label="Tutup">&times;</button>
-      </div>
-
-      <div class="modal-body">
-        <div class="task-meta-strip" id="modal-task-meta"></div>
-
-        <div class="modal-section">
-          <h3>Instruksi &amp; Kriteria</h3>
-          <p id="modal-task-desc" class="task-desc-box"></p>
-        </div>
-
-        <!-- Status & Mentor Review Actions -->
-        <div class="modal-section">
-          <h3>Status &amp; Tinjauan</h3>
-          <div class="status-control-row">
-            <select id="modal-task-status-select" class="select-sm">
-              <option value="todo">Belum dimulai</option>
-              <option value="in_progress">Berjalan</option>
-              <option value="in_review">Siap direviu</option>
-              <option value="revision">Revisi</option>
-              <option value="done">Selesai</option>
-            </select>
-            <button type="button" id="modal-save-status-btn" class="btn btn-primary btn-sm">Perbarui Status</button>
-
-            <div id="mentor-review-actions" class="header-actions hidden">
-              <button type="button" id="mentor-approve-btn" class="btn btn-success btn-sm">Setujui Selesai</button>
-              <button type="button" id="mentor-revision-btn" class="btn btn-warning btn-sm">Minta Revisi</button>
-              <button type="button" id="mentor-delete-task-btn" class="btn btn-ghost btn-sm text-danger">Hapus</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Subtasks Checklist -->
-        <div class="modal-section">
-          <div class="card-header-row" style="margin-bottom: 8px;">
-            <h3>Sub-tugas (<span id="modal-subtask-progress">0/0</span>)</h3>
-          </div>
-          <div id="modal-subtasks-list" class="subtasks-list"></div>
-          <form id="modal-add-subtask-form" class="inline-form-row" style="margin-top: 8px;">
-            <input id="modal-new-subtask-input" type="text" placeholder="Tambah langkah sub-tugas..." required />
-            <button type="submit" class="btn btn-outline btn-sm">Tambah</button>
-          </form>
-        </div>
-
-        <!-- Attachments / Links -->
-        <div class="modal-section">
-          <h3>Tautan &amp; Lampiran Hasil Kerja</h3>
-          <div id="modal-attachments-list" class="clean-list" style="margin-bottom: 8px;"></div>
-          <form id="modal-add-attachment-form" class="inline-form-row">
-            <input id="modal-att-label" type="text" placeholder="Label (misal: Hasil Desain / Repo)" required />
-            <input id="modal-att-url" type="url" placeholder="https://..." required />
-            <button type="submit" class="btn btn-outline btn-sm">Lampirkan</button>
-          </form>
-        </div>
-
-        <!-- Discussion Thread -->
-        <div class="modal-section">
-          <h3>Diskusi &amp; Catatan</h3>
-          <div id="modal-comments-list" class="comments-list"></div>
-          <form id="modal-add-comment-form" class="inline-form-row" style="margin-top: 10px;">
-            <input id="modal-comment-input" type="text" placeholder="Tulis komentar atau laporan progres..." required />
-            <button type="submit" class="btn btn-primary btn-sm">Kirim</button>
-          </form>
-        </div>
-      </div>
+<a class="skip-link" href="#mainRegion">Lewati ke konten utama</a>
+
+<!-- ══════════ AUTH ══════════ -->
+<div id="authView" class="auth-gate-modal auth-split">
+  <div class="auth-hero">
+    <div class="auth-glass">
+      <span class="hero-eyebrow">Akasha · Ruang Kerja Tim</span>
+      <h2>Satu ruang untuk tugas, divisi, dan tenggat.</h2>
+      <p>Mentor membagikan tugas ke seluruh tim, per divisi, atau per orang. Anggota mengirim laporan, mentor memvalidasi. Semua tercatat.</p>
+      <ul class="hero-facts">
+        <li><strong>20</strong><span>anggota per ruang</span></li>
+        <li><strong>6</strong><span>karakter kode undangan</span></li>
+        <li><strong>4</strong><span>tahap status tugas</span></li>
+      </ul>
     </div>
   </div>
 
-  <!-- ═══ MODAL 2: ADD / EDIT HABIT ═══ -->
-  <div id="habit-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="habit-modal-title">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h2 id="habit-modal-title">Tambah Kebiasaan Baru</h2>
-        <button type="button" class="icon-btn" data-close-modal="habit-modal" aria-label="Tutup">&times;</button>
-      </div>
-      <form id="habit-form" class="modal-body">
-        <input type="hidden" id="habit-edit-id" />
-        <div class="field">
-          <label for="habit-name-input">Nama Kebiasaan *</label>
-          <input id="habit-name-input" type="text" placeholder="Contoh: Membaca 15 halaman, Olahraga pagi" required />
+  <div class="auth-panel">
+    <div class="auth-card">
+      <div class="auth-brand"><span class="brand-badge">Akasha</span></div>
+
+      <form id="loginForm" novalidate>
+        <h1 class="auth-title" id="authTitle">Selamat <span>Datang</span></h1>
+        <p class="auth-subtitle" id="authSubtitle">Masuk untuk membuka ruang kerja Anda.</p>
+        <div class="form-group">
+          <label for="loginEmail">Alamat email</label>
+          <input type="email" id="loginEmail" autocomplete="email" placeholder="nama@tim.id" required />
         </div>
-        <div class="field">
-          <label for="habit-category-select">Kategori</label>
-          <select id="habit-category-select">
-            <option value="Produktivitas">Produktivitas</option>
-            <option value="Kesehatan">Kesehatan</option>
-            <option value="Belajar">Belajar</option>
-            <option value="Kesejahteraan">Kesejahteraan</option>
-          </select>
+        <div class="form-group">
+          <label for="loginPassword">Kata sandi</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" placeholder="••••••••" required />
         </div>
-        <div class="field">
-          <label for="habit-freq-select">Jadwal Hari</label>
-          <select id="habit-freq-select">
-            <option value="daily">Setiap Hari</option>
-            <option value="weekdays">Hari Kerja (Senin – Jumat)</option>
-          </select>
+        <div class="auth-options">
+          <label class="remember-me" for="rememberMe"><input type="checkbox" id="rememberMe" /> Ingat saya</label>
+          <a href="#" id="forgotPasswordLink" class="forgot-password">Lupa sandi?</a>
         </div>
-        <div class="row-end" style="margin-top: 16px;">
-          <button type="button" class="btn btn-ghost" data-close-modal="habit-modal">Batal</button>
-          <button type="submit" class="btn btn-primary">Simpan Kebiasaan</button>
+        <button type="submit" id="loginBtn" class="btn-primary">Masuk ke ruang kerja</button>
+        <div class="divider-container">atau</div>
+        <button type="button" id="googleLoginBtn" class="btn-google">
+          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.2-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 16 19 13 24 13c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.6 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.5 2.4-7.2 2.4-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.2-4.1 5.6l6.2 5.2c-.4.4 6.6-4.8 6.6-14.8 0-1.2-.1-2.4-.4-3.5z"/></svg>
+          Masuk dengan Google
+        </button>
+        <p class="auth-footer">Belum punya akun? <a href="#" id="authToggleLink">Daftar sekarang</a></p>
+      </form>
+
+      <form id="registerForm" class="hidden" novalidate>
+        <h1 class="auth-title">Buat <span>Akun</span></h1>
+        <p class="auth-subtitle">Daftar untuk membuat atau bergabung ke ruang kerja.</p>
+        <div class="form-group">
+          <label for="registerName">Nama lengkap</label>
+          <input type="text" id="registerName" autocomplete="name" placeholder="Nama yang tampil di tim" required />
         </div>
+        <div class="form-group">
+          <label for="registerEmail">Alamat email</label>
+          <input type="email" id="registerEmail" autocomplete="email" placeholder="nama@tim.id" required />
+        </div>
+        <div class="form-group">
+          <label for="registerPassword">Kata sandi</label>
+          <input type="password" id="registerPassword" autocomplete="new-password" placeholder="Minimal 6 karakter" required />
+        </div>
+        <button type="submit" id="registerBtn" class="btn-primary">Buat akun</button>
+        <p class="auth-footer">Sudah punya akun? <a href="#" id="authToggleLink2">Masuk di sini</a></p>
       </form>
     </div>
   </div>
+</div>
 
-  <!-- ═══ MODAL 3: MOOD HISTORY & PAST DAY EDIT ═══ -->
-  <div id="mood-history-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="mood-hist-title">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h2 id="mood-hist-title">Riwayat Suasana Hati &amp; Jurnal</h2>
-        <button type="button" class="icon-btn" data-close-modal="mood-history-modal" aria-label="Tutup">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="edit-past-mood-form" class="sub-panel" style="margin-bottom: 16px;">
-          <h3 style="margin-bottom: 8px;">Catat / Ubah Mood Tanggal Tertentu</h3>
-          <div class="inline-form-row">
-            <input type="date" id="past-mood-date" required />
-            <select id="past-mood-score" class="select-sm">
-              <option value="5">😄 Luar Biasa (5)</option>
-              <option value="4">🙂 Baik (4)</option>
-              <option value="3">😐 Biasa (3)</option>
-              <option value="2">😔 Lelah (2)</option>
-              <option value="1">😫 Berat (1)</option>
-            </select>
-          </div>
-          <div class="inline-form-row" style="margin-top: 8px;">
-            <input type="text" id="past-mood-note" placeholder="Catatan jurnal untuk tanggal tersebut..." />
-            <button type="submit" class="btn btn-primary btn-sm">Simpan</button>
-          </div>
-        </form>
-        <div id="mood-history-list" class="clean-list"></div>
-      </div>
+<!-- ══════════ DASHBOARD ══════════ -->
+<div id="dashboardView" class="dashboard-layout hidden">
+  <aside class="sidebar">
+    <div class="sidebar-brand"><span class="brand-mark" aria-hidden="true">A</span><h3>Akasha</h3></div>
+    <nav class="sidebar-menu" aria-label="Navigasi utama">
+      <button class="menu-item active" id="dashboardNavBtn" title="Dashboard"><span class="menu-icon" aria-hidden="true">▦</span><span class="menu-label">Dashboard</span></button>
+      <button class="menu-item" id="myWorkspacesNavBtn" title="Ruang kerja saya"><span class="menu-icon" aria-hidden="true">▣</span><span class="menu-label">Ruang Kerja</span></button>
+      <button class="menu-item" id="notificationsNavBtn" title="Notifikasi" aria-label="Notifikasi"><span class="menu-icon" aria-hidden="true">◔</span><span class="menu-label">Notifikasi</span><span class="nav-badge hidden" id="notifBadge"></span></button>
+      <button class="menu-item" id="accountBtn" title="Pengaturan akun"><span class="menu-icon" aria-hidden="true">⚙</span><span class="menu-label">Akun</span></button>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-logout-sidebar" id="logoutBtn" title="Keluar dari akun"><span class="menu-icon" aria-hidden="true">⏻</span><span class="menu-label">Keluar</span></button>
     </div>
-  </div>
+  </aside>
 
-  <!-- ═══ MODAL 4: MONTHLY HABIT RECAP ═══ -->
-  <div id="monthly-recap-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="recap-modal-title">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h2 id="recap-modal-title">Rekap Kebiasaan Bulanan</h2>
-        <button type="button" class="icon-btn" data-close-modal="monthly-recap-modal" aria-label="Tutup">&times;</button>
-      </div>
-      <div class="modal-body">
-        <div id="monthly-recap-content"></div>
-      </div>
+  <header class="dashboard-topbar">
+    <div class="topbar-left"><h2 class="topbar-title" id="dashboardPageTitle">Dashboard</h2></div>
+    <div class="topbar-right">
+      <button class="topbar-icon-btn" id="notificationsNavBtnTop" aria-label="Buka notifikasi"><span aria-hidden="true">◔</span></button>
+      <button class="topbar-profile-badge" id="accountBtnTop" title="Pengaturan akun">
+        <span class="avatar-circle" id="topbarUserAvatar">A</span>
+        <span class="user-info-text"><span class="user-name" id="topbarUserName">Pengguna</span><span class="user-role" id="topbarUserRole">Member</span></span>
+      </button>
     </div>
-  </div>
+  </header>
 
-  <!-- ═══ MODAL 5: PROFILE & APPEARANCE SETTINGS ═══ -->
-  <div id="profile-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
-    <div class="modal-card modal-sm">
-      <div class="modal-header">
-        <h2 id="profile-modal-title">Profil &amp; Tema Tampilan</h2>
-        <button type="button" class="icon-btn" data-close-modal="profile-modal" aria-label="Tutup">&times;</button>
-      </div>
-      <div class="modal-body">
-        <form id="profile-update-form">
-          <div class="field">
-            <label for="profile-name-input">Nama Tampilan</label>
-            <input id="profile-name-input" type="text" required />
-          </div>
-          <div class="field">
-            <label for="profile-email-display">Email Akun</label>
-            <input id="profile-email-display" type="email" disabled />
-          </div>
-          <button type="submit" class="btn btn-primary btn-block">Simpan Nama</button>
-        </form>
+  <div class="main-content-wrapper">
+    <main class="dashboard-content" id="mainRegion">
 
-        <div class="modal-section" style="margin-top: 18px;">
-          <h3>Pilih Tema Akasha</h3>
-          <div class="theme-cards-grid">
-            <button type="button" class="theme-option-card" data-theme-select="light">
-              <strong>Terang</strong>
-              <span>Stone &amp; Ember bersih</span>
-            </button>
-            <button type="button" class="theme-option-card" data-theme-select="dark">
-              <strong>Gelap</strong>
-              <span>Nyaman di malam hari</span>
-            </button>
-            <button type="button" class="theme-option-card" data-theme-select="playful">
-              <strong>Playful</strong>
-              <span>Aksen ceria &amp; bulat</span>
-            </button>
+      <!-- ── HOME ── -->
+      <section id="dashboardHomePanel">
+        <div class="welcome-alert" id="welcomeAlert">
+          <span class="welcome-dot" aria-hidden="true"></span>
+          <span id="welcomeText">Selamat datang kembali. Ringkasan tugas, tenggat, dan ruang kerja Anda ada di bawah.</span>
+        </div>
+
+        <!-- Soft reminder (productivity) -->
+        <div class="welcome-alert reminder-banner hidden" id="prodReminderBanner">
+          <span class="welcome-dot" aria-hidden="true"></span>
+          <span id="prodReminderText"></span>
+        </div>
+
+        <!-- Stats 4 kolom -->
+        <div class="stats-grid dash-stats" id="dashboardSummary"></div>
+
+        <div class="dash-grid">
+          <div class="dash-main">
+            <!-- Kebiasaan harian -->
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h3>Kebiasaan harian</h3>
+                  <p class="subtitle">Centang yang sudah kamu kerjakan hari ini.</p>
+                </div>
+                <button class="btn-sm btn-solid" id="addHabitBtn" type="button">Tambah kebiasaan</button>
+              </div>
+              <div class="habit-cat-filters" id="habitCatFilters" role="group" aria-label="Filter kategori">
+                <button type="button" class="habit-cat-chip active" data-cat="all">Semua</button>
+                <button type="button" class="habit-cat-chip" data-cat="sehat">Sehat</button>
+                <button type="button" class="habit-cat-chip" data-cat="kerja">Kerja</button>
+                <button type="button" class="habit-cat-chip" data-cat="belajar">Belajar</button>
+              </div>
+              <div class="habit-layout">
+                <div class="habit-list" id="habitList"></div>
+                <div class="habit-graph-wrap">
+                  <div class="habit-streak-info" id="habitStreakInfo"></div>
+                  <div class="contrib-graph" id="contribGraph" aria-label="Grafik kebiasaan"></div>
+                  <div class="contrib-legend">
+                    <span>Sepi</span>
+                    <span class="legend-cells"><i class="lv0"></i><i class="lv1"></i><i class="lv2"></i><i class="lv3"></i><i class="lv4"></i></span>
+                    <span>Rajin</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Insight korelasi -->
+            <div class="card" id="insightCard">
+              <div class="section-head">
+                <div>
+                  <h3>Insight</h3>
+                  <p class="subtitle">Hubungan kebiasaan dan mood kamu.</p>
+                </div>
+                <button class="btn-sm btn-ghost" id="openRecapBtn" type="button">Lihat rekap</button>
+              </div>
+              <div id="insightBody" class="insight-body">
+                <p class="empty-hint">Belum cukup data</p>
+              </div>
+            </div>
+
+            <!-- Daftar tugas ringkas -->
+            <div class="card">
+              <div class="section-head">
+                <div>
+                  <h3>Daftar tugas</h3>
+                  <p class="subtitle">Urut dari tenggat terdekat.</p>
+                </div>
+              </div>
+              <div id="dashboardTaskList" class="dash-task-list"></div>
+            </div>
+
+            <!-- Notifikasi (tetap ada) -->
+            <div class="card">
+              <div class="section-head">
+                <div><h3>Notifikasi</h3><p class="subtitle">Tugas yang menunggu tindakan atau baru selesai.</p></div>
+                <button class="btn-sm btn-ghost" data-goto="notifications">Lihat semua</button>
+              </div>
+              <div id="dashboardNotificationsList"></div>
+            </div>
+          </div>
+
+          <aside class="dash-side">
+            <!-- Mood hari ini -->
+            <div class="card mood-card">
+              <div class="mood-title-row">
+                <h3>Mood hari ini</h3>
+                <span class="mood-streak-pill hidden" id="moodStreakPill"></span>
+              </div>
+              <p class="subtitle">Pilih satu, tulis satu kalimat.</p>
+              <div class="mood-picker" id="moodPicker" role="group" aria-label="Pilih mood">
+                <button type="button" class="mood-btn" data-mood="1" aria-label="Sangat buruk">😢</button>
+                <button type="button" class="mood-btn" data-mood="2" aria-label="Buruk">😟</button>
+                <button type="button" class="mood-btn" data-mood="3" aria-label="Biasa">😐</button>
+                <button type="button" class="mood-btn" data-mood="4" aria-label="Baik">😊</button>
+                <button type="button" class="mood-btn" data-mood="5" aria-label="Sangat baik">😄</button>
+              </div>
+              <div class="mood-tag-row" id="moodTagRow">
+                <button type="button" class="mood-tag-chip" data-tag="Tidur">Tidur</button>
+                <button type="button" class="mood-tag-chip" data-tag="Kerjaan">Kerjaan</button>
+                <button type="button" class="mood-tag-chip" data-tag="Keluarga">Keluarga</button>
+                <button type="button" class="mood-tag-chip" data-tag="Teman">Teman</button>
+                <button type="button" class="mood-tag-chip" data-tag="Kesehatan">Kesehatan</button>
+                <button type="button" class="mood-tag-chip mood-tag-custom" id="moodTagCustomBtn">+ Tag</button>
+              </div>
+              <div class="mood-form">
+                <input type="text" id="moodNote" placeholder="Tulis satu kalimat singkat…" maxlength="80" />
+                <button type="button" class="btn-sm btn-solid" id="saveMoodBtn">Simpan</button>
+              </div>
+              <div class="mood-chart-wrap">
+                <div class="mood-month-nav">
+                  <button type="button" class="btn-sm btn-ghost" id="moodMonthPrev" aria-label="Bulan sebelumnya">‹</button>
+                  <div class="mini-title" id="moodMonthLabel">Tren bulan ini</div>
+                  <button type="button" class="btn-sm btn-ghost" id="moodMonthNext" aria-label="Bulan berikutnya">›</button>
+                </div>
+                <div class="mood-month-stats" id="moodMonthStats"></div>
+                <div class="mood-chart" id="moodChart"></div>
+              </div>
+              <div class="mood-journal-wrap">
+                <div class="mini-title">Jurnal mood</div>
+                <div id="moodJournalList" class="mood-journal-list"></div>
+              </div>
+            </div>
+
+            <!-- Tenggat mendekat -->
+            <div class="card">
+              <div class="section-head">
+                <div><h3>Tenggat mendekat</h3><p class="subtitle">7 hari ke depan.</p></div>
+              </div>
+              <div class="mini-cal-list" id="miniCalendarList"></div>
+            </div>
+
+            <!-- Aktivitas / preview ruang kerja -->
+            <div class="card">
+              <div class="section-head">
+                <div><h3>Ruang kerja saya</h3></div>
+                <button class="btn-sm btn-ghost" data-goto="workspaces">Kelola</button>
+              </div>
+              <div id="dashboardWorkspacePreview"></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ── WORKSPACES ── -->
+      <section id="myWorkspacesPanel" class="hidden">
+        <div class="ws-page-head">
+          <div>
+            <h3 class="ws-page-title">Ruang kerja saya</h3>
+            <p class="subtitle">Semua ruang yang kamu ikuti sebagai mentor atau anggota.</p>
+          </div>
+          <div class="workspace-action-bar">
+            <button class="btn-workspace-action primary" id="createWorkspaceBtn"><span class="btn-icon" aria-hidden="true">＋</span> Buat ruang kerja</button>
+            <button class="btn-workspace-action secondary" id="joinWorkspaceBtn"><span class="btn-icon" aria-hidden="true">↗</span> Gabung dengan kode</button>
           </div>
         </div>
+        <div id="workspaceList" class="ws-card-grid"></div>
+      </section>
+
+      <!-- ── NOTIFICATIONS ── -->
+      <section id="notificationsPanel" class="hidden">
+        <div class="card">
+          <div class="section-head">
+            <div><h3>Notifikasi</h3><p class="subtitle">Pembaruan tugas, laporan, dan pengumuman untuk Anda.</p></div>
+            <button class="btn-sm btn-ghost" id="markAllReadBtn">Tandai semua dibaca</button>
+          </div>
+          <div id="dashboardNotificationsListFull"></div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════ WORKSPACE ══════════ -->
+<div id="workspaceView" class="hidden">
+  <nav class="navbar">
+    <div class="brand"><h1 id="workspaceTitle">Ruang Kerja</h1></div>
+    <div class="navbar-right"><span id="roleControls" class="role-controls"></span></div>
+  </nav>
+
+  <div class="workspace-body">
+    <aside class="workspace-sidebar">
+      <div class="ws-sidebar-section">
+        <div class="ws-sidebar-label">Menu ruang kerja</div>
+        <button class="ws-nav-item active" id="tabTaskView"><span aria-hidden="true">▦</span> <span id="tabTaskLabel">Tugas Saya</span></button>
+        <button class="ws-nav-item" id="tabCalendarView"><span aria-hidden="true">▤</span> Kalender Tenggat</button>
+        <button class="ws-nav-item" id="tabActivityView"><span aria-hidden="true">◷</span> Aktivitas</button>
+        <button class="ws-nav-item" id="tabAnnouncementView"><span aria-hidden="true">✦</span> Pengumuman</button>
+        <button class="ws-nav-item" id="tabTeamView"><span aria-hidden="true">◍</span> Rekan Tim</button>
+      </div>
+
+      <div class="ws-sidebar-section" id="mentorPanel">
+        <div class="ws-sidebar-label">Pengaturan mentor</div>
+        <button class="ws-nav-item" id="tabDivisionView"><span aria-hidden="true">◎</span> Manajemen Divisi</button>
+        <button class="ws-nav-item" id="changeCodeBtn"><span aria-hidden="true">⚿</span> Ganti Kode Undangan</button>
+        <button class="ws-nav-item ws-danger" id="deleteWorkspaceBtn"><span aria-hidden="true">🗑</span> Hapus Ruang Kerja</button>
+      </div>
+
+      <div class="ws-sidebar-bottom">
+        <button class="ws-back-btn ws-back-dashboard" id="backToDashboardBtn"><span aria-hidden="true">◁</span> Kembali ke Dashboard</button>
+        <button class="ws-back-btn" id="leaveWorkspaceBtn"><span aria-hidden="true">⏻</span> Keluar dari Ruang Kerja</button>
+      </div>
+    </aside>
+
+    <main class="workspace-content">
+
+      <!-- ── TASKS ── -->
+      <section id="mainTaskContainer">
+        <div class="card" id="dailyGoalSection">
+          <div class="section-head"><div><h3>Target hari ini</h3><p class="subtitle">Tulis fokus Anda. Target tersimpan untuk tanggal hari ini.</p></div></div>
+          <div class="daily-goal-form">
+            <label class="sr-only" for="dailyGoalInput">Target harian</label>
+            <input type="text" id="dailyGoalInput" placeholder="Contoh: tuntaskan revisi layout halaman utama" />
+            <button class="btn-primary btn-inline" id="saveDailyGoalBtn">Simpan target</button>
+          </div>
+          <div id="dailyGoalDisplay" class="goal-badge"></div>
+        </div>
+
+        <div class="card" id="mentorTaskCreator">
+          <div class="section-head"><div><h3>Buat tugas baru</h3><p class="subtitle">Satu tugas dibuat per penerima saat Anda memilih divisi atau seluruh tim.</p></div></div>
+          <form id="createTaskForm">
+            <div class="form-group">
+              <label for="taskTitle">Judul tugas *</label>
+              <input type="text" id="taskTitle" class="field" placeholder="Apa yang harus dikerjakan?" required />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="taskAssignee">Ditugaskan kepada *</label>
+                <select id="taskAssignee" class="field" data-enhance></select>
+              </div>
+              <div class="form-group">
+                <label for="taskDifficulty">Tingkat kesulitan</label>
+                <select id="taskDifficulty" class="field" data-enhance>
+                  <option value="rendah">Rendah</option>
+                  <option value="sedang" selected>Sedang</option>
+                  <option value="tinggi">Tinggi</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="taskDriveSource">Sumber tautan Drive</label>
+              <select id="taskDriveSource" class="field" data-enhance>
+                <option value="workspace">Gunakan folder Drive utama ruang kerja</option>
+                <option value="individual">Anggota mengisi tautan Drive sendiri</option>
+              </select>
+            </div>
+            <div class="form-group" id="workspaceDriveGroup">
+              <label for="driveLinkInput">Tautan folder Google Drive</label>
+              <div class="input-with-btn">
+                <input type="url" id="driveLinkInput" class="field" placeholder="https://drive.google.com/drive/folders/…" />
+                <button type="button" class="btn-primary btn-inline" id="saveDriveBtn">Simpan</button>
+              </div>
+              <span id="driveStatusText" class="status-text">Belum ada folder yang tertaut.</span>
+            </div>
+            <div class="form-row">
+              <div class="form-group"><label for="startDate">Tanggal mulai</label><input type="date" id="startDate" class="field" /></div>
+              <div class="form-group"><label for="endDate">Tenggat waktu</label><input type="date" id="endDate" class="field" /></div>
+            </div>
+            <div class="form-group">
+              <label for="taskDesc">Instruksi &amp; kriteria selesai</label>
+              <textarea id="taskDesc" class="field" rows="3" placeholder="Jelaskan hasil yang Anda harapkan."></textarea>
+            </div>
+            <div class="form-group">
+              <label for="taskSubtasks">Sub-tugas — satu per baris</label>
+              <textarea id="taskSubtasks" class="field" rows="3" placeholder="Riset referensi&#10;Buat draf&#10;Serahkan untuk ditinjau"></textarea>
+            </div>
+            <button type="submit" class="btn-primary">Bagikan tugas</button>
+          </form>
+        </div>
+
+        <div class="card">
+          <div class="section-head"><div><h3>Papan tugas</h3><p class="subtitle">Klik baris untuk membuka detail, sub-tugas, dan laporan.</p></div></div>
+          <div class="task-toolbar">
+            <label class="sr-only" for="taskSearch">Cari tugas</label>
+            <input type="text" id="taskSearch" placeholder="Cari judul atau instruksi…" />
+            <label class="sr-only" for="filterStatus">Filter status</label>
+            <select id="filterStatus" data-enhance>
+              <option value="">Semua status</option>
+              <option value="todo">Belum dimulai</option>
+              <option value="progress">Berjalan</option>
+              <option value="review">Siap dicek</option>
+              <option value="done">Selesai</option>
+            </select>
+            <label class="sr-only" for="filterDifficulty">Filter kesulitan</label>
+            <select id="filterDifficulty" data-enhance>
+              <option value="">Semua kesulitan</option>
+              <option value="rendah">Rendah</option>
+              <option value="sedang">Sedang</option>
+              <option value="tinggi">Tinggi</option>
+            </select>
+            <label class="sr-only" for="filterAssignee">Filter anggota</label>
+            <select id="filterAssignee" data-enhance><option value="">Semua anggota</option></select>
+          </div>
+          <div id="deadlineBanner" class="deadline-banner hidden"></div>
+          <div class="table-scroll">
+            <table>
+              <thead><tr><th>Judul tugas</th><th>Instruksi</th><th>Anggota</th><th class="col-center">Kesulitan</th><th class="col-center">Status</th><th>Tenggat</th></tr></thead>
+              <tbody id="taskTableBody"><tr><td colspan="6" class="table-empty">Belum ada tugas dalam daftar.</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── CALENDAR ── -->
+      <section id="calendarPanel" class="hidden">
+        <div class="card">
+          <div class="cal-head">
+            <div><h3 id="calTitle">Kalender Tenggat</h3><p class="subtitle">Setiap chip adalah satu tugas pada tanggal tenggatnya.</p></div>
+            <div class="cal-nav"><button id="calPrev" aria-label="Bulan sebelumnya">‹</button><button id="calToday">Hari ini</button><button id="calNext" aria-label="Bulan berikutnya">›</button></div>
+          </div>
+          <div class="cal-grid cal-dow"><span>Sen</span><span>Sel</span><span>Rab</span><span>Kam</span><span>Jum</span><span>Sab</span><span>Min</span></div>
+          <div class="cal-grid" id="calGrid"></div>
+        </div>
+      </section>
+
+      <!-- ── ACTIVITY ── -->
+      <section id="activityPanel" class="hidden">
+        <div class="card">
+          <div class="section-head"><div><h3>Aktivitas ruang kerja</h3><p class="subtitle">100 kejadian terbaru dari semua anggota, diperbarui langsung.</p></div></div>
+          <div id="activityList"></div>
+        </div>
+      </section>
+
+      <!-- ── ANNOUNCEMENTS ── -->
+      <section id="announcementPanel" class="hidden">
+        <div class="card" id="announceCreator">
+          <div class="section-head"><div><h3>Buat pengumuman</h3><p class="subtitle">Terkirim ke seluruh anggota ruang kerja ini.</p></div></div>
+          <form id="announceForm">
+            <div class="form-group"><label for="announceTitle">Judul</label><input type="text" id="announceTitle" class="field" required /></div>
+            <div class="form-group"><label for="announceBody">Isi pengumuman</label><textarea id="announceBody" class="field" rows="4" required></textarea></div>
+            <label class="remember-me pin-row" for="announcePinned"><input type="checkbox" id="announcePinned" /> Sematkan di bagian atas</label>
+            <button type="submit" class="btn-primary">Kirim pengumuman</button>
+          </form>
+        </div>
+        <div class="card">
+          <div class="section-head"><div><h3>Papan pengumuman</h3></div></div>
+          <div id="announceList"></div>
+        </div>
+      </section>
+
+      <!-- ── TEAM ── -->
+      <section id="teamPanel" class="hidden">
+        <div class="card">
+          <div class="section-head"><div><h3>Rekan tim</h3><p class="subtitle">Status aktif dihitung dari denyut terakhir tiap anggota.</p></div></div>
+          <div class="team-members-grid" id="teamMembersList"></div>
+        </div>
+      </section>
+
+      <!-- ── DIVISIONS ── -->
+      <section id="divisionManagementPanel" class="hidden">
+        <div class="card">
+          <div class="section-head"><div><h3>Daftar divisi</h3><p class="subtitle">Menghapus divisi memindahkan anggotanya ke “Umum”.</p></div></div>
+          <form id="createDivisionForm" class="inline-form">
+            <div class="form-row">
+              <div class="form-group"><label for="newDivisionName">Nama divisi *</label><input type="text" id="newDivisionName" class="field" placeholder="Contoh: Produksi" required /></div>
+              <div class="form-group"><label for="newDivisionDesc">Deskripsi</label><input type="text" id="newDivisionDesc" class="field" placeholder="Tanggung jawab divisi" /></div>
+            </div>
+            <button type="submit" class="btn-primary">Buat divisi</button>
+          </form>
+          <div id="divisionListContainer"></div>
+        </div>
+        <div class="card">
+          <div class="section-head"><div><h3>Status kehadiran</h3><p class="subtitle">Siapa yang sedang berada di ruang kerja ini.</p></div></div>
+          <div class="team-members-grid" id="memberPresenceList"></div>
+        </div>
+        <div class="card">
+          <div class="section-head"><div><h3>Pengaturan anggota</h3><p class="subtitle">Atur peran dan penempatan divisi.</p></div></div>
+          <div class="table-scroll">
+            <table id="memberSettingsTable">
+              <thead><tr><th>Nama</th><th>Email</th><th class="col-center">Peran</th><th class="col-center">Divisi</th><th class="col-center">Aksi</th></tr></thead>
+              <tbody id="memberSettingsTableBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+</div>
+
+<!-- ══════════ MODALS ══════════ -->
+<div id="taskDetailModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="detailTaskTitle">
+  <div class="modal-content modal-content-lg">
+    <button class="close-modal" data-close="taskDetailModal" aria-label="Tutup detail">×</button>
+    <h2 id="detailTaskTitle" class="modal-title">Detail tugas</h2>
+    <p class="modal-meta">Ditugaskan kepada <strong id="detailTaskAssignee">—</strong></p>
+    <div class="detail-section detail-pills"><span id="detailTaskStatus" class="stat-pill"></span><span id="detailTaskDifficulty" class="stat-pill"></span></div>
+    <div class="detail-section"><span class="detail-label">Periode</span><div id="detailTaskDates" class="detail-dates"></div></div>
+    <div class="detail-section"><span class="detail-label">Tautan Google Drive</span><div id="detailTaskDrive"></div></div>
+    <div class="detail-section"><span class="detail-label">Instruksi</span><p id="detailTaskDesc" class="detail-desc"></p></div>
+    <div class="detail-section" id="detailSubtaskBox">
+      <div class="detail-row-head"><span class="detail-label">Sub-tugas</span><span id="detailProgressText" class="detail-progress-text">0%</span></div>
+      <div class="progress-row"><div class="progress-track"><div id="detailProgressFill" class="progress-fill"></div></div></div>
+      <div id="detailSubtaskList"></div>
+      <div id="detailSubtaskAdd" class="input-with-btn">
+        <label class="sr-only" for="subtaskInput">Sub-tugas baru</label>
+        <input type="text" id="subtaskInput" class="field" placeholder="Tambah sub-tugas…" />
+        <button type="button" class="btn-primary btn-inline" id="addSubtaskBtn">Tambah</button>
       </div>
     </div>
+    <div class="detail-section">
+      <span class="detail-label">Lampiran tautan</span>
+      <div id="detailAttachList"></div>
+      <div id="attachUploader" class="attach-uploader">
+        <label class="sr-only" for="attachName">Nama lampiran</label>
+        <input type="text" id="attachName" class="field" placeholder="Nama lampiran" />
+        <label class="sr-only" for="attachUrl">Tautan lampiran</label>
+        <input type="url" id="attachUrl" class="field" placeholder="https://…" />
+        <button type="button" class="btn-primary btn-inline" id="addAttachBtn">Tambah</button>
+      </div>
+    </div>
+    <div id="detailRevisionBox" class="review-report-box hidden"><strong>Catatan revisi dari mentor</strong><p id="detailRevisionNotes"></p></div>
+    <div class="detail-section"><span class="detail-label">Riwayat</span><div id="detailHistoryList"></div></div>
+    <div id="detailReportBox" class="hidden detail-form-block">
+      <h4>Kirim laporan</h4>
+      <div class="form-group"><label for="reportLink">Tautan hasil kerja *</label><input type="url" id="reportLink" class="field" placeholder="https://drive.google.com/…" /></div>
+      <div class="form-group"><label for="reportNotes">Catatan progres</label><textarea id="reportNotes" class="field" rows="3" placeholder="Apa yang sudah selesai, apa yang masih tertahan."></textarea></div>
+      <div id="reportError" class="form-error hidden"></div>
+    </div>
+    <div id="detailReviewBox" class="hidden detail-form-block">
+      <h4>Ulasan mentor</h4>
+      <div class="form-group"><label for="reviewNotes">Catatan — wajib untuk revisi</label><textarea id="reviewNotes" class="field" rows="3" placeholder="Tulis bagian yang perlu diperbaiki."></textarea></div>
+      <div id="reviewError" class="form-error hidden"></div>
+    </div>
+    <div id="detailActionButtons"></div>
   </div>
+</div>
 
-  <script type="module" src="script.js"></script>
+<div id="createWorkspaceModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="close-modal" data-close="createWorkspaceModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title">Buat ruang kerja</h2>
+    <p class="modal-meta">Anda otomatis menjadi mentor di ruang ini.</p>
+    <form id="createWorkspaceForm">
+      <div class="form-group"><label for="newWorkspaceName">Nama ruang kerja *</label><input type="text" id="newWorkspaceName" class="field" placeholder="Contoh: Tim Produksi 2026" required /></div>
+      <div class="form-group"><label for="newWorkspaceCode">Kode undangan — 6 karakter *</label><input type="text" id="newWorkspaceCode" class="field code-field" maxlength="6" placeholder="ABC123" required /></div>
+      <div class="form-group"><label for="newWorkspaceDrive">Folder Google Drive</label><input type="url" id="newWorkspaceDrive" class="field" placeholder="https://drive.google.com/… (opsional)" /></div>
+      <button type="submit" id="createWorkspaceSubmitBtn" class="btn-primary">Buat ruang kerja</button>
+    </form>
+  </div>
+</div>
+
+<div id="joinWorkspaceModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="close-modal" data-close="joinWorkspaceModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title">Gabung ruang kerja</h2>
+    <p class="modal-meta">Minta kode 6 karakter dari mentor ruang tersebut.</p>
+    <form id="joinWorkspaceForm">
+      <div class="form-group"><label for="joinCodeInput">Kode undangan *</label><input type="text" id="joinCodeInput" class="field code-field" maxlength="6" placeholder="ABC123" required /></div>
+      <button type="submit" id="joinWorkspaceSubmitBtn" class="btn-primary">Gabung ruang kerja</button>
+    </form>
+  </div>
+</div>
+
+<div id="accountModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="close-modal" data-close="accountModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title">Pengaturan akun</h2>
+    <p class="modal-meta">Mengganti nama juga memperbarui nama Anda di setiap tugas.</p>
+    <form id="accountForm">
+      <div class="form-group"><label for="accountName">Nama tampilan</label><input type="text" id="accountName" class="field" required /></div>
+      <div class="form-group"><label for="accountPassword">Kata sandi baru</label><input type="password" id="accountPassword" class="field" autocomplete="new-password" placeholder="Kosongkan bila tidak diganti" /></div>
+      <button type="submit" class="btn-primary">Simpan perubahan</button>
+    </form>
+    <div class="theme-section">
+      <div class="mini-title" style="margin-bottom:.6rem">Tema tampilan</div>
+      <div class="theme-picker" id="themePicker" role="group" aria-label="Pilih tema">
+        <button type="button" class="theme-opt" data-theme="light" title="Terang">
+          <span class="theme-swatch theme-swatch-light"></span>
+          <span>Terang</span>
+        </button>
+        <button type="button" class="theme-opt" data-theme="dark" title="Gelap">
+          <span class="theme-swatch theme-swatch-dark"></span>
+          <span>Gelap</span>
+        </button>
+        <button type="button" class="theme-opt" data-theme="playful" title="Playful">
+          <span class="theme-swatch theme-swatch-playful"></span>
+          <span>Playful</span>
+        </button>
+      </div>
+      <label class="toggle-switch hidden" aria-hidden="true"><input type="checkbox" id="darkModeToggle" /><span class="toggle-slider"></span></label>
+    </div>
+  </div>
+</div>
+
+<div id="editMemberModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="close-modal" data-close="editMemberModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title">Atur divisi &amp; peran</h2>
+    <form id="editMemberForm">
+      <input type="hidden" id="editMemberId" />
+      <div class="form-group"><label for="editMemberNameDisplay">Anggota</label><input type="text" id="editMemberNameDisplay" class="field" readonly /></div>
+      <div class="form-group"><label for="editMemberRole">Peran</label>
+        <select id="editMemberRole" class="field" data-enhance><option value="worker">Member — mengerjakan tugas</option><option value="mentor">Lead — membuat &amp; memvalidasi</option></select>
+      </div>
+      <div class="form-group"><label for="editMemberDivision">Divisi</label><select id="editMemberDivision" class="field" data-enhance></select></div>
+      <button type="submit" class="btn-primary">Simpan perubahan</button>
+    </form>
+  </div>
+</div>
+
+<div id="editTaskModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="close-modal" data-close="editTaskModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title">Edit tugas</h2>
+    <p class="modal-meta">Judul dan instruksi dapat diperbarui kapan saja oleh mentor.</p>
+    <form id="editTaskForm">
+      <input type="hidden" id="editTaskId" />
+      <div class="form-group"><label for="editTaskTitleInput">Judul tugas *</label><input type="text" id="editTaskTitleInput" class="field" required /></div>
+      <div class="form-group"><label for="editTaskDescInput">Instruksi</label><textarea id="editTaskDescInput" class="field" rows="4"></textarea></div>
+      <button type="submit" class="btn-primary">Simpan tugas</button>
+    </form>
+  </div>
+</div>
+
+<div id="editAnnounceModal" class="modal hidden" role="dialog" aria-modal="true">
+  <div class="modal-content">
+    <button class="close-modal" data-close="editAnnounceModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title">Edit pengumuman</h2>
+    <form id="editAnnounceForm">
+      <input type="hidden" id="editAnnounceId" />
+      <div class="form-group"><label for="editAnnounceTitle">Judul *</label><input type="text" id="editAnnounceTitle" class="field" required /></div>
+      <div class="form-group"><label for="editAnnounceBody">Isi pengumuman *</label><textarea id="editAnnounceBody" class="field" rows="5" required></textarea></div>
+      <button type="submit" class="btn-primary">Simpan pengumuman</button>
+    </form>
+  </div>
+</div>
+
+<div id="habitModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="habitModalTitle">
+  <div class="modal-content">
+    <button class="close-modal" data-close="habitModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title" id="habitModalTitle">Tambah kebiasaan</h2>
+    <form id="habitForm">
+      <input type="hidden" id="habitEditId" value="" />
+      <div class="form-group">
+        <label for="habitNameInput">Nama kebiasaan *</label>
+        <input type="text" id="habitNameInput" class="field" placeholder="Contoh: Ngoding 1 jam" maxlength="40" required />
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="habitCategory">Kategori</label>
+          <select id="habitCategory" class="field">
+            <option value="kerja">Kerja</option>
+            <option value="sehat">Sehat</option>
+            <option value="belajar">Belajar</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="habitIcon">Ikon (emoji)</label>
+          <input type="text" id="habitIcon" class="field" placeholder="✨" maxlength="4" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="habitScheduleType">Jadwal</label>
+        <select id="habitScheduleType" class="field">
+          <option value="daily">Setiap hari</option>
+          <option value="weekly">Target per minggu</option>
+          <option value="days">Hari tertentu</option>
+        </select>
+      </div>
+      <div class="form-group hidden" id="habitWeeklyTargetWrap">
+        <label for="habitWeeklyTarget">Target hari / minggu</label>
+        <input type="number" id="habitWeeklyTarget" class="field" min="1" max="7" value="3" />
+      </div>
+      <div class="form-group hidden" id="habitDaysWrap">
+        <label>Hari aktif</label>
+        <div class="habit-days-picker" id="habitDaysPicker">
+          <label class="day-chip"><input type="checkbox" value="1" /> Sen</label>
+          <label class="day-chip"><input type="checkbox" value="2" /> Sel</label>
+          <label class="day-chip"><input type="checkbox" value="3" /> Rab</label>
+          <label class="day-chip"><input type="checkbox" value="4" /> Kam</label>
+          <label class="day-chip"><input type="checkbox" value="5" /> Jum</label>
+          <label class="day-chip"><input type="checkbox" value="6" /> Sab</label>
+          <label class="day-chip"><input type="checkbox" value="0" /> Min</label>
+        </div>
+      </div>
+      <label class="remember-me" for="habitArchived"><input type="checkbox" id="habitArchived" /> Arsipkan (sembunyikan dari daftar utama)</label>
+      <div class="dialog-actions" style="margin-top:1rem">
+        <button type="button" class="btn-sm btn-ghost hidden" id="habitDeleteBtn">Hapus</button>
+        <button type="submit" class="btn-sm btn-solid" id="habitSaveBtn">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="moodEditModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="moodEditTitle">
+  <div class="modal-content">
+    <button class="close-modal" data-close="moodEditModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title" id="moodEditTitle">Edit jurnal mood</h2>
+    <form id="moodEditForm">
+      <input type="hidden" id="moodEditDate" value="" />
+      <div class="form-group">
+        <label>Mood</label>
+        <div class="mood-picker" id="moodEditPicker" role="group">
+          <button type="button" class="mood-btn" data-mood="1" aria-label="Sangat buruk">😢</button>
+          <button type="button" class="mood-btn" data-mood="2" aria-label="Buruk">😟</button>
+          <button type="button" class="mood-btn" data-mood="3" aria-label="Biasa">😐</button>
+          <button type="button" class="mood-btn" data-mood="4" aria-label="Baik">😊</button>
+          <button type="button" class="mood-btn" data-mood="5" aria-label="Sangat baik">😄</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="moodEditNote">Catatan</label>
+        <input type="text" id="moodEditNote" class="field" maxlength="80" />
+      </div>
+      <div class="form-group">
+        <label for="moodEditTags">Tag (pisahkan koma)</label>
+        <input type="text" id="moodEditTags" class="field" placeholder="Tidur, Kerjaan" />
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn-sm btn-danger" id="moodDeleteBtn">Hapus</button>
+        <button type="submit" class="btn-sm btn-solid">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="recapModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="recapTitle">
+  <div class="modal-content modal-content-lg">
+    <button class="close-modal" data-close="recapModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title" id="recapTitle">Rekap bulanan</h2>
+    <div id="recapBody" class="recap-body"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn-sm btn-ghost" data-close="recapModal">Tutup</button>
+      <button type="button" class="btn-sm btn-solid" id="copyRecapBtn">Salin rekap</button>
+    </div>
+  </div>
+</div>
+
+<div id="appDialog" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="appDialogTitle">
+  <div class="modal-content modal-dialog">
+    <h2 class="modal-title" id="appDialogTitle">Konfirmasi</h2>
+    <p class="modal-meta" id="appDialogMessage"></p>
+    <div class="form-group hidden" id="appDialogFieldWrap">
+      <label for="appDialogInput" id="appDialogLabel">Nilai</label>
+      <input type="text" id="appDialogInput" class="field" />
+      <div class="form-error hidden" id="appDialogError"></div>
+    </div>
+    <div class="dialog-actions">
+      <button type="button" class="btn-sm btn-ghost" id="appDialogCancel">Batal</button>
+      <button type="button" class="btn-sm btn-solid" id="appDialogConfirm">Ya, lanjut</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer" aria-live="polite"></div>
+<noscript><p class="noscript-note">Akasha membutuhkan JavaScript untuk berjalan.</p></noscript>
+<script type="module" src="script.js"></script>
 </body>
 </html>
