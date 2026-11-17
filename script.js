@@ -1088,23 +1088,52 @@ function notify(uids, data) {
 }
 function startNotifications() {
   stopNotifications();
-  notifUnsub = onSnapshot(query(collection(db, 'users', state.user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(60)), snap => {
+  notifUnsub = onSnapshot(query(collection(db, 'users', state.user.uid, 'notifications'), orderBy('createdAt', 'desc'), limit(300)), snap => {
     notifications = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderNotifBadge();
+    if ($('dashboardNotificationsList')) renderDashboardNotifications();
+    if ($('dashboardNotificationsListFull') && !$('notificationsPanel')?.classList.contains('hidden')) renderFullNotifications();
   }, err => console.warn('Notifikasi gagal dimuat:', err));
 }
-function stopNotifications() { if (notifUnsub) { notifUnsub(); notifUnsub = null; } notifications = []; }
+function stopNotifications() {
+  if (notifUnsub) { notifUnsub(); notifUnsub = null; }
+  notifications = [];
+  renderNotifBadge();
+}
 function renderNotifBadge() {
   const unread = notifications.filter(n => !n.read).length;
-  const b = $('notifBadge');
-  if (b) { b.textContent = unread > 99 ? '99+' : unread; b.classList.toggle('hidden', !unread); }
+  document.querySelectorAll('.nav-badge').forEach(b => {
+    if (!unread) {
+      b.classList.add('hidden');
+      b.textContent = '';
+      return;
+    }
+    b.classList.remove('hidden');
+    b.textContent = unread >= 100 ? '99+' : String(unread);
+  });
+  const menu = $('notificationsNavBtn');
+  if (menu) {
+    menu.setAttribute('aria-label', unread
+      ? `Notifikasi, ${unread >= 100 ? '99+' : unread} belum dibaca`
+      : 'Notifikasi');
+  }
+  const top = $('notificationsNavBtnTop');
+  if (top) {
+    top.setAttribute('aria-label', unread
+      ? `Notifikasi, ${unread >= 100 ? '99+' : unread} belum dibaca`
+      : 'Notifikasi');
+  }
 }
 async function markAllRead() {
   const un = notifications.filter(n => !n.read); if (!un.length) return;
   const b = writeBatch(db);
   un.forEach(n => b.update(doc(db, 'users', state.user.uid, 'notifications', n.id), { read: true }));
-  try { await b.commit(); toast('Semua notifikasi dibaca', 'success'); }
-  catch (err) { await showAlert('Gagal: ' + err.message); }
+  try {
+    await b.commit();
+    notifications.forEach(n => { n.read = true; });
+    renderNotifBadge();
+    toast('Semua notifikasi dibaca', 'success');
+  } catch (err) { await showAlert('Gagal: ' + err.message); }
 }
 
 /* ══════════ SUBTASKS & ATTACHMENTS ══════════ */
@@ -1464,60 +1493,318 @@ function setupEventListeners() {
   $('announceForm').addEventListener('submit', postAnnouncement);
 }
 
-/* ══════════ PERSONAL PRODUCTIVITY (habits · mood) — localStorage ══════════ */
-const PROD_KEY = 'akasha_productivity_v2';
+/* ══════════ PERSONAL PRODUCTIVITY v3 (habits · mood · insight) ══════════ */
+const PROD_KEY = 'akasha_productivity_v3';
+const PROD_KEY_V2 = 'akasha_productivity_v2';
+const MOOD_EMOJI = { 1: '😢', 2: '😟', 3: '😐', 4: '😊', 5: '😄' };
+const CAT_ICONS = { sehat: '💪', kerja: '💼', belajar: '📚' };
+const MILESTONES = [7, 21, 30, 66, 100];
 let prodData = null;
 let selectedMood = null;
+let selectedMoodTags = [];
+let habitCatFilter = 'all';
+let expandedHabitId = null;
+let moodMonthCursor = null; // Date at month start
+let moodEditSelected = null;
+let prodSyncTimer = null;
+let prodCloudUnsub = null;
 
-function loadProd() {
-  try {
-    const raw = localStorage.getItem(PROD_KEY);
-    if (raw) {
-      prodData = JSON.parse(raw);
-      // pastikan struktur valid
-      if (!Array.isArray(prodData.habits)) prodData.habits = [];
-      if (!Array.isArray(prodData.habitHistory)) prodData.habitHistory = [];
-      if (!Array.isArray(prodData.moodHistory)) prodData.moodHistory = [];
-      return;
-    }
-  } catch (_) {}
-  // default kosong — user mulai dari nol
-  prodData = {
+function emptyProd() {
+  return {
     habits: [],
     habitHistory: [],
     moodToday: null,
     moodNote: '',
-    moodHistory: []
+    moodHistory: [],
+    lastRollDate: localDate(),
+    moodStreak: 0,
+    celebratedMilestones: {}
   };
-  saveProd();
 }
-function saveProd() {
+
+function migrateProdV2toV3(v2) {
+  const d = emptyProd();
+  d.habits = (v2.habits || []).map(h => ({
+    id: h.id || newId(),
+    name: h.name || 'Kebiasaan',
+    streak: h.streak || 0,
+    longest: h.longest || 0,
+    doneToday: !!h.doneToday,
+    history: h.history || {},
+    schedule: h.schedule || { type: 'daily' },
+    icon: h.icon || '',
+    category: h.category || 'kerja',
+    archived: !!h.archived,
+    freezes: typeof h.freezes === 'number' ? h.freezes : 1,
+    freezeUsedMonth: h.freezeUsedMonth || ''
+  }));
+  d.habitHistory = Array.isArray(v2.habitHistory) ? v2.habitHistory : [];
+  d.moodToday = v2.moodToday ?? null;
+  d.moodNote = v2.moodNote || '';
+  d.moodHistory = (v2.moodHistory || []).map(m => ({
+    date: m.date, mood: m.mood, note: m.note || '', tags: m.tags || []
+  }));
+  d.lastRollDate = v2.lastRollDate || localDate();
+  return d;
+}
+
+function loadProdLocal() {
+  try {
+    const raw = localStorage.getItem(PROD_KEY);
+    if (raw) {
+      prodData = JSON.parse(raw);
+      normalizeProd();
+      return true;
+    }
+    const v2 = localStorage.getItem(PROD_KEY_V2);
+    if (v2) {
+      prodData = migrateProdV2toV3(JSON.parse(v2));
+      localStorage.removeItem(PROD_KEY_V2);
+      saveProdLocal();
+      return true;
+    }
+  } catch (_) {}
+  prodData = emptyProd();
+  saveProdLocal();
+  return false;
+}
+
+function normalizeProd() {
+  if (!prodData) prodData = emptyProd();
+  if (!Array.isArray(prodData.habits)) prodData.habits = [];
+  if (!Array.isArray(prodData.habitHistory)) prodData.habitHistory = [];
+  if (!Array.isArray(prodData.moodHistory)) prodData.moodHistory = [];
+  if (!prodData.celebratedMilestones) prodData.celebratedMilestones = {};
+  prodData.habits.forEach(h => {
+    if (!h.history) h.history = {};
+    if (!h.schedule) h.schedule = { type: 'daily' };
+    if (!h.category) h.category = 'kerja';
+    if (typeof h.freezes !== 'number') h.freezes = 1;
+    if (!h.freezeUsedMonth) h.freezeUsedMonth = '';
+    if (typeof h.archived !== 'boolean') h.archived = false;
+  });
+  prodData.moodHistory.forEach(m => { if (!Array.isArray(m.tags)) m.tags = []; if (!m.note) m.note = ''; });
+  if (!prodData.lastRollDate) prodData.lastRollDate = localDate();
+}
+
+function saveProdLocal() {
   try { localStorage.setItem(PROD_KEY, JSON.stringify(prodData)); } catch (_) {}
 }
+
+function saveProd() {
+  normalizeProd();
+  saveProdLocal();
+  scheduleProdCloudSave();
+}
+
+function scheduleProdCloudSave() {
+  if (!state.user) return;
+  clearTimeout(prodSyncTimer);
+  prodSyncTimer = setTimeout(() => persistProdToCloud(), 600);
+}
+
+async function persistProdToCloud() {
+  if (!state.user || !prodData) return;
+  try {
+    await setDoc(doc(db, 'users', state.user.uid, 'productivity', 'data'), {
+      ...prodData,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (e) { console.warn('Gagal sync produktivitas:', e); }
+}
+
+async function loadProdFromCloud() {
+  if (!state.user) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', state.user.uid, 'productivity', 'data'));
+    if (snap.exists()) {
+      const cloud = snap.data();
+      delete cloud.updatedAt;
+      // cloud wins if newer or local empty
+      const localTs = 0;
+      prodData = cloud;
+      normalizeProd();
+      saveProdLocal();
+    }
+  } catch (e) { console.warn('Gagal muat produktivitas cloud:', e); }
+}
+
+function isScheduledDay(h, dateStr) {
+  const sch = h.schedule || { type: 'daily' };
+  if (sch.type === 'daily') return true;
+  const d = new Date(dateStr + 'T12:00:00');
+  const dow = d.getDay(); // 0 Sun
+  if (sch.type === 'days') return (sch.days || []).map(Number).includes(dow);
+  if (sch.type === 'weekly') return true; // any day can count toward weekly target
+  return true;
+}
+
+function weekKey(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const onejan = new Date(d.getFullYear(), 0, 1);
+  const week = Math.ceil((((d - onejan) / 864e5) + onejan.getDay() + 1) / 7);
+  return d.getFullYear() + '-W' + week;
+}
+
+function weeklyDoneCount(h, dateStr) {
+  const wk = weekKey(dateStr);
+  let n = 0;
+  Object.keys(h.history || {}).forEach(dt => {
+    if (weekKey(dt) === wk && h.history[dt]) n++;
+  });
+  return n;
+}
+
+function rollOverDay() {
+  if (!prodData) return;
+  const today = localDate();
+  if (prodData.lastRollDate === today) return;
+
+  // walk days from lastRollDate+1 ... yesterday
+  let cursor = new Date(prodData.lastRollDate + 'T12:00:00');
+  const end = new Date(today + 'T12:00:00');
+  end.setDate(end.getDate() - 1);
+
+  while (cursor <= end) {
+    const ds = localDate(cursor);
+    const monthKey = ds.slice(0, 7);
+    prodData.habits.forEach(h => {
+      // record previous doneToday only for lastRollDate itself already done; for intermediate days treat as missed
+      const wasDone = (ds === prodData.lastRollDate) ? !!h.doneToday : !!h.history?.[ds];
+      if (!h.history) h.history = {};
+      if (wasDone) h.history[ds] = true;
+
+      if (isScheduledDay(h, ds) && !wasDone) {
+        // try freeze
+        if (h.freezes > 0 && h.freezeUsedMonth !== monthKey) {
+          h.freezes -= 1;
+          h.freezeUsedMonth = monthKey;
+          h.history[ds] = true; // freeze counts as protected
+          h._lastFreeze = ds;
+        } else {
+          h.streak = 0;
+        }
+      }
+      h.doneToday = false;
+    });
+    // aggregate cell
+    let cell = prodData.habitHistory.find(c => c.date === ds);
+    if (!cell) { cell = { date: ds, level: 0 }; prodData.habitHistory.push(cell); }
+    const active = prodData.habits.filter(x => !x.archived);
+    const done = active.filter(x => x.history?.[ds]).length;
+    cell.level = active.length ? Math.min(4, Math.ceil((done / active.length) * 4)) : 0;
+
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  // mood streak break if yesterday missing
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  const ys = localDate(y);
+  if (!prodData.moodHistory.some(m => m.date === ys) && prodData.moodToday == null) {
+    // only break if we rolled past yesterday without entry
+  }
+  // reset today mood flags if lastRoll was not today
+  if (prodData.lastRollDate !== today) {
+    // keep moodToday only if it was for today — it's not, so clear
+    const lastMood = prodData.moodHistory.find(m => m.date === prodData.lastRollDate);
+    if (prodData.moodToday != null && prodData.lastRollDate !== today) {
+      // already in history presumably
+      prodData.moodToday = null;
+      prodData.moodNote = '';
+    }
+    // recompute mood streak
+    prodData.moodStreak = computeMoodStreak();
+  }
+
+  prodData.lastRollDate = today;
+  prodData.habits.forEach(h => { h.doneToday = !!h.history?.[today]; });
+  saveProd();
+}
+
+function computeMoodStreak() {
+  let streak = 0;
+  const d = new Date();
+  for (;;) {
+    const ds = localDate(d);
+    if (prodData.moodHistory.some(m => m.date === ds) || (ds === localDate() && prodData.moodToday)) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    } else break;
+  }
+  return streak;
+}
+
 function ensureProdToday() {
-  if (!prodData) loadProd();
-  // Optionally reset doneToday at day change — keep simple for now
+  if (!prodData) loadProdLocal();
+  rollOverDay();
+}
+
+function activeHabits() {
+  return (prodData.habits || []).filter(h => !h.archived && (habitCatFilter === 'all' || h.category === habitCatFilter));
 }
 
 function renderHabits() {
   ensureProdToday();
   const list = $('habitList');
   if (!list) return;
-  if (!prodData.habits.length) {
+  const habits = activeHabits();
+  if (!habits.length) {
     list.innerHTML = '<p class="empty-hint" style="padding:.5rem 0">Belum ada kebiasaan. Tekan “Tambah kebiasaan” untuk mulai.</p>';
   } else {
-    list.innerHTML = prodData.habits.map(h => `
-      <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${h.id}">
-        <span class="habit-check">${h.doneToday ? '✓' : ''}</span>
-        <span class="habit-name">${escapeHtml(h.name)}</span>
-        <span class="habit-days">${h.streak} hari</span>
-        <button type="button" class="habit-edit-btn" data-edit="${h.id}" title="Edit">✎</button>
-      </div>
-    `).join('');
+    list.innerHTML = habits.map(h => {
+      const icon = h.icon || CAT_ICONS[h.category] || '✨';
+      const milestone = MILESTONES.filter(m => h.streak >= m).pop();
+      const celebrated = milestone && (prodData.celebratedMilestones[h.id] || []).includes(milestone);
+      let progress = '';
+      if (h.schedule?.type === 'weekly') {
+        const t = h.schedule.target || 3;
+        const n = weeklyDoneCount(h, localDate());
+        progress = `<span class="habit-progress">${n}/${t} minggu ini</span>`;
+      }
+      const open = expandedHabitId === h.id;
+      // mini heatmap 56 days
+      const cells = [];
+      for (let i = 55; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const ds = localDate(d);
+        const on = !!h.history?.[ds];
+        cells.push(`<div class="contrib-cell ${on ? 'lv3' : 'lv0'}" title="${ds}"></div>`);
+      }
+      let done30 = 0;
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        if (h.history?.[localDate(d)]) done30++;
+      }
+      return `
+      <div class="habit-block" data-id="${h.id}">
+        <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${h.id}">
+          <span class="habit-check" data-toggle="${h.id}">${h.doneToday ? '✓' : ''}</span>
+          <span class="habit-icon">${icon}</span>
+          <span class="habit-name">${escapeHtml(h.name)}</span>
+          ${progress}
+          <span class="habit-days">${h.streak} hari${milestone ? ' <span class="milestone-pill">🏅 ' + milestone + '</span>' : ''}</span>
+          <button type="button" class="habit-edit-btn" data-edit="${h.id}" title="Edit">✎</button>
+        </div>
+        <div class="habit-detail ${open ? '' : 'hidden'}" data-detail="${h.id}">
+          <div class="habit-detail-stats">
+            <span>${done30}/30 hari · ${Math.round(done30 / 30 * 100)}%</span>
+            <span>Streak ${h.streak} · terpanjang ${h.longest}</span>
+            <span>❄ Freeze: ${h.freezes}</span>
+          </div>
+          <div class="contrib-graph habit-mini-graph">${cells.join('')}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-toggle]').forEach(el => {
+      el.addEventListener('click', e => { e.stopPropagation(); toggleHabit(el.dataset.toggle); });
+    });
     list.querySelectorAll('.habit-item').forEach(el => {
       el.addEventListener('click', e => {
-        if (e.target.closest('[data-edit]')) return;
-        toggleHabit(el.dataset.id);
+        if (e.target.closest('[data-toggle]') || e.target.closest('[data-edit]')) return;
+        const id = el.dataset.id;
+        expandedHabitId = expandedHabitId === id ? null : id;
+        renderHabits();
       });
     });
     list.querySelectorAll('[data-edit]').forEach(btn => {
@@ -1527,17 +1814,16 @@ function renderHabits() {
       });
     });
   }
-  const top = prodData.habits.length
-    ? prodData.habits.reduce((a, b) => (a.streak >= b.streak ? a : b), prodData.habits[0])
-    : null;
+
+  const top = habits.length ? habits.reduce((a, b) => (a.streak >= b.streak ? a : b), habits[0]) : null;
   const info = $('habitStreakInfo');
   if (info) info.textContent = top && top.streak > 0
     ? `${top.name} · ${top.streak} hari beruntun · terpanjang ${top.longest}`
-    : (prodData.habits.length ? 'Belum ada streak. Centang kebiasaan hari ini.' : '');
+    : (habits.length ? 'Belum ada streak. Centang kebiasaan hari ini.' : '');
+
   const graph = $('contribGraph');
   if (graph) {
-    // tampilkan 105 sel; kosong = level 0
-    let recent = prodData.habitHistory.slice(-105);
+    let recent = (prodData.habitHistory || []).slice(-105);
     if (recent.length < 105) {
       const pad = 105 - recent.length;
       const filled = [];
@@ -1549,51 +1835,325 @@ function renderHabits() {
     }
     graph.innerHTML = recent.map(c => `<div class="contrib-cell lv${c.level || 0}" title="${c.date || ''}"></div>`).join('');
   }
+  renderReminderBanner();
+  renderInsight();
 }
+
 function toggleHabit(id) {
   const h = prodData.habits.find(x => x.id === id);
   if (!h) return;
-  h.doneToday = !h.doneToday;
-  if (h.doneToday) { h.streak += 1; if (h.streak > h.longest) h.longest = h.streak; }
-  else h.streak = Math.max(0, h.streak - 1);
   const today = localDate();
+  if (!isScheduledDay(h, today) && h.schedule?.type === 'days') {
+    toast('Hari ini tidak terjadwal untuk kebiasaan ini', 'info');
+    return;
+  }
+  h.doneToday = !h.doneToday;
+  if (!h.history) h.history = {};
+  if (h.doneToday) {
+    h.history[today] = true;
+    h.streak += 1;
+    if (h.streak > h.longest) h.longest = h.streak;
+    // milestone
+    MILESTONES.forEach(m => {
+      if (h.streak === m) {
+        if (!prodData.celebratedMilestones[h.id]) prodData.celebratedMilestones[h.id] = [];
+        if (!prodData.celebratedMilestones[h.id].includes(m)) {
+          prodData.celebratedMilestones[h.id].push(m);
+          toast(`🏅 Streak ${m} hari: ${h.name}!`, 'success');
+        }
+      }
+    });
+  } else {
+    delete h.history[today];
+    h.streak = Math.max(0, h.streak - 1);
+  }
   let cell = prodData.habitHistory.find(c => c.date === today);
   if (!cell) { cell = { date: today, level: 0 }; prodData.habitHistory.push(cell); }
-  const doneCount = prodData.habits.filter(x => x.doneToday).length;
-  cell.level = Math.min(4, Math.ceil((doneCount / Math.max(1, prodData.habits.length)) * 4));
+  const active = prodData.habits.filter(x => !x.archived);
+  const doneCount = active.filter(x => x.doneToday).length;
+  cell.level = Math.min(4, Math.ceil((doneCount / Math.max(1, active.length)) * 4));
   saveProd();
   renderHabits();
   toast(h.doneToday ? `✓ ${h.name}` : `Dibatalkan: ${h.name}`, 'success');
 }
+
 function openHabitModal(id) {
   const isEdit = !!id;
   $('habitModalTitle').textContent = isEdit ? 'Edit kebiasaan' : 'Tambah kebiasaan';
   $('habitEditId').value = id || '';
   const h = id ? prodData.habits.find(x => x.id === id) : null;
   $('habitNameInput').value = h ? h.name : '';
+  if ($('habitCategory')) $('habitCategory').value = h?.category || 'kerja';
+  if ($('habitIcon')) $('habitIcon').value = h?.icon || '';
+  if ($('habitScheduleType')) $('habitScheduleType').value = h?.schedule?.type || 'daily';
+  if ($('habitWeeklyTarget')) $('habitWeeklyTarget').value = h?.schedule?.target || 3;
+  if ($('habitArchived')) $('habitArchived').checked = !!h?.archived;
+  // days
+  const days = h?.schedule?.days || [];
+  document.querySelectorAll('#habitDaysPicker input').forEach(cb => {
+    cb.checked = days.map(Number).includes(Number(cb.value));
+  });
+  toggleHabitScheduleFields();
   $('habitDeleteBtn').classList.toggle('hidden', !isEdit);
   $('habitModal').classList.remove('hidden');
   setTimeout(() => $('habitNameInput').focus(), 40);
 }
+
+function toggleHabitScheduleFields() {
+  const t = $('habitScheduleType')?.value || 'daily';
+  $('habitWeeklyTargetWrap')?.classList.toggle('hidden', t !== 'weekly');
+  $('habitDaysWrap')?.classList.toggle('hidden', t !== 'days');
+}
+
+function renderMoodUI() {
+  ensureProdToday();
+  selectedMood = prodData.moodToday;
+  document.querySelectorAll('#moodPicker .mood-btn').forEach(b => {
+    b.classList.toggle('selected', Number(b.dataset.mood) === selectedMood);
+  });
+  if ($('moodNote')) $('moodNote').value = prodData.moodNote || '';
+
+  // tags selected for today
+  selectedMoodTags = [];
+  const todayEntry = prodData.moodHistory.find(m => m.date === localDate());
+  if (todayEntry?.tags) selectedMoodTags = [...todayEntry.tags];
+  document.querySelectorAll('#moodTagRow .mood-tag-chip[data-tag]').forEach(c => {
+    c.classList.toggle('selected', selectedMoodTags.includes(c.dataset.tag));
+  });
+
+  // streak pill
+  const streak = computeMoodStreak();
+  prodData.moodStreak = streak;
+  const pill = $('moodStreakPill');
+  if (pill) {
+    if (streak > 0) { pill.textContent = `🔥 ${streak} hari beruntun`; pill.classList.remove('hidden'); }
+    else pill.classList.add('hidden');
+  }
+
+  renderMoodMonthChart();
+  renderMoodJournal();
+  renderReminderBanner();
+  renderInsight();
+}
+
+function renderMoodMonthChart() {
+  const chart = $('moodChart');
+  if (!chart) return;
+  if (!moodMonthCursor) {
+    const n = new Date();
+    moodMonthCursor = new Date(n.getFullYear(), n.getMonth(), 1);
+  }
+  const y = moodMonthCursor.getFullYear();
+  const m = moodMonthCursor.getMonth();
+  const label = $('moodMonthLabel');
+  if (label) label.textContent = moodMonthCursor.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const entries = {};
+  (prodData.moodHistory || []).forEach(e => {
+    if (e.date.startsWith(`${y}-${String(m + 1).padStart(2, '0')}`)) entries[e.date] = e.mood;
+  });
+  if (localDate().startsWith(`${y}-${String(m + 1).padStart(2, '0')}`) && prodData.moodToday) {
+    entries[localDate()] = prodData.moodToday;
+  }
+
+  const moods = Object.values(entries);
+  const avg = moods.length ? (moods.reduce((a, b) => a + b, 0) / moods.length) : 0;
+  const dist = [0, 0, 0, 0, 0];
+  moods.forEach(v => { if (v >= 1 && v <= 5) dist[v - 1]++; });
+  const stats = $('moodMonthStats');
+  if (stats) {
+    stats.innerHTML = moods.length
+      ? `<span class="mood-avg">${MOOD_EMOJI[Math.round(avg)] || '😐'} ${avg.toFixed(1)}</span>
+         <span class="mood-dist">${[1,2,3,4,5].map(i => `${MOOD_EMOJI[i]} ${dist[i-1]}`).join(' · ')}</span>`
+      : '<span class="empty-hint">Belum ada data bulan ini</span>';
+  }
+
+  // bar chart
+  const w = Math.max(280, daysInMonth * 10), h = 72, pad = 4;
+  let bars = '';
+  for (let day = 1; day <= daysInMonth; day++) {
+    const ds = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const mood = entries[ds] || 0;
+    const bh = mood ? ((mood / 5) * (h - pad * 2)) : 2;
+    const x = pad + ((day - 1) / daysInMonth) * (w - pad * 2);
+    const bw = Math.max(4, (w - pad * 2) / daysInMonth - 2);
+    const color = mood ? '#EA580C' : 'var(--border-subtle)';
+    bars += `<rect x="${x.toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${mood ? '#EA580C' : '#E7E5E4'}" opacity="${mood ? 0.85 : 0.4}"/>`;
+  }
+  chart.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" width="100%" height="72">${bars}</svg>`;
+}
+
+function renderMoodJournal() {
+  const el = $('moodJournalList');
+  if (!el) return;
+  const items = [...(prodData.moodHistory || [])].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 10);
+  if (!items.length) {
+    el.innerHTML = '<p class="empty-hint">Belum ada jurnal mood.</p>';
+    return;
+  }
+  const isMobile = window.innerWidth <= 768;
+  const show = isMobile ? items.slice(0, 5) : items;
+  el.innerHTML = show.map(m => {
+    const d = new Date(m.date + 'T12:00:00');
+    const label = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+    const tags = (m.tags || []).map(t => `<span class="mood-tag-chip mini">${escapeHtml(t)}</span>`).join('');
+    return `<button type="button" class="mood-journal-item" data-date="${m.date}">
+      <span class="mj-emoji">${MOOD_EMOJI[m.mood] || '😐'}</span>
+      <span class="mj-body"><span class="mj-date">${label}</span>
+      ${m.note ? `<span class="mj-note">${escapeHtml(m.note)}</span>` : ''}
+      <span class="mj-tags">${tags}</span></span>
+    </button>`;
+  }).join('') + (isMobile && items.length > 5 ? '<button type="button" class="btn-sm btn-ghost" id="moodJournalMore">Lihat semua</button>' : '');
+
+  el.querySelectorAll('.mood-journal-item').forEach(btn => {
+    btn.addEventListener('click', () => openMoodEdit(btn.dataset.date));
+  });
+}
+
+function openMoodEdit(date) {
+  const m = prodData.moodHistory.find(x => x.date === date);
+  if (!m) return;
+  $('moodEditDate').value = date;
+  moodEditSelected = m.mood;
+  document.querySelectorAll('#moodEditPicker .mood-btn').forEach(b => {
+    b.classList.toggle('selected', Number(b.dataset.mood) === m.mood);
+  });
+  $('moodEditNote').value = m.note || '';
+  $('moodEditTags').value = (m.tags || []).join(', ');
+  $('moodEditModal').classList.remove('hidden');
+}
+
+function renderInsight() {
+  const body = $('insightBody');
+  if (!body) return;
+  const hist = prodData.habitHistory || [];
+  const moods = {};
+  (prodData.moodHistory || []).forEach(m => { moods[m.date] = m.mood; });
+  let high = [], low = [];
+  hist.forEach(c => {
+    if (moods[c.date] == null) return;
+    if (c.level >= 3) high.push(moods[c.date]);
+    else if (c.level <= 2) low.push(moods[c.date]);
+  });
+  if (high.length + low.length < 6) {
+    body.innerHTML = '<p class="empty-hint">Belum cukup data</p>';
+    return;
+  }
+  const avg = arr => arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+  const ah = avg(high), al = avg(low);
+  const diff = ah - al;
+  if (Math.abs(diff) < 0.15) {
+    body.innerHTML = '<p>Belum terlihat pola kuat antara kebiasaan dan mood.</p>';
+  } else if (diff > 0) {
+    body.innerHTML = `<p>Saat kamu menuntaskan kebiasaan, mood-mu rata-rata <strong>${diff.toFixed(1)} poin lebih tinggi</strong>.</p>`;
+  } else {
+    body.innerHTML = `<p>Menarik: mood-mu justru lebih tinggi di hari dengan kebiasaan lebih longgar (selisih ${Math.abs(diff).toFixed(1)} poin).</p>`;
+  }
+}
+
+function renderReminderBanner() {
+  const ban = $('prodReminderBanner');
+  const txt = $('prodReminderText');
+  if (!ban || !txt) return;
+  const hour = new Date().getHours();
+  if (hour < 19) { ban.classList.add('hidden'); return; }
+  ensureProdToday();
+  const pending = (prodData.habits || []).filter(h => !h.archived && isScheduledDay(h, localDate()) && !h.doneToday);
+  const noMood = prodData.moodToday == null && !prodData.moodHistory.some(m => m.date === localDate());
+  if (!pending.length && !noMood) { ban.classList.add('hidden'); return; }
+  const parts = [];
+  if (pending.length) parts.push(`${pending.length} kebiasaan belum dicentang`);
+  if (noMood) parts.push('kamu belum check-in mood');
+  txt.textContent = parts.join(' · ');
+  ban.classList.remove('hidden');
+}
+
+function openRecapModal() {
+  const body = $('recapBody');
+  if (!body) return;
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const prefix = `${y}-${String(m + 1).padStart(2, '0')}`;
+  const moods = (prodData.moodHistory || []).filter(e => e.date.startsWith(prefix));
+  const avg = moods.length ? moods.reduce((a, b) => a + b.mood, 0) / moods.length : 0;
+  let best = null, worst = null;
+  moods.forEach(e => {
+    if (!best || e.mood > best.mood) best = e;
+    if (!worst || e.mood < worst.mood) worst = e;
+  });
+  const tagCount = {};
+  moods.forEach(e => (e.tags || []).forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; }));
+  const topTag = Object.entries(tagCount).sort((a, b) => b[1] - a[1])[0];
+  let habitDone = 0, habitTotal = 0;
+  (prodData.habits || []).forEach(h => {
+    Object.keys(h.history || {}).forEach(ds => {
+      if (ds.startsWith(prefix)) { habitTotal++; if (h.history[ds]) habitDone++; }
+    });
+  });
+  // recount properly: per habit scheduled days in month
+  habitDone = 0; habitTotal = 0;
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  (prodData.habits || []).filter(h => !h.archived).forEach(h => {
+    for (let d = 1; d <= daysInMonth; d++) {
+      const ds = `${prefix}-${String(d).padStart(2, '0')}`;
+      if (ds > localDate()) continue;
+      if (!isScheduledDay(h, ds)) continue;
+      habitTotal++;
+      if (h.history?.[ds]) habitDone++;
+    }
+  });
+  const longest = (prodData.habits || []).reduce((mx, h) => Math.max(mx, h.longest || 0), 0);
+  const monthName = now.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  body.innerHTML = `
+    <p class="recap-month">${escapeHtml(monthName)}</p>
+    <ul class="recap-list">
+      <li>Rata-rata mood: <strong>${moods.length ? avg.toFixed(1) + ' ' + (MOOD_EMOJI[Math.round(avg)] || '') : '—'}</strong></li>
+      <li>Hari terbaik: <strong>${best ? best.date + ' ' + (MOOD_EMOJI[best.mood] || '') : '—'}</strong></li>
+      <li>Hari terendah: <strong>${worst ? worst.date + ' ' + (MOOD_EMOJI[worst.mood] || '') : '—'}</strong></li>
+      <li>Tag tersering: <strong>${topTag ? escapeHtml(topTag[0]) + ' (' + topTag[1] + ')' : '—'}</strong></li>
+      <li>Penyelesaian kebiasaan: <strong>${habitTotal ? Math.round(habitDone / habitTotal * 100) + '%' : '—'} (${habitDone}/${habitTotal})</strong></li>
+      <li>Streak terpanjang: <strong>${longest} hari</strong></li>
+    </ul>`;
+  window.__recapText = `Rekap ${monthName}\nMood rata-rata: ${avg.toFixed(1)}\nHari terbaik: ${best ? best.date : '-'}\nHari terendah: ${worst ? worst.date : '-'}\nTag: ${topTag ? topTag[0] : '-'}\nKebiasaan: ${habitDone}/${habitTotal}\nStreak terpanjang: ${longest} hari`;
+  $('recapModal').classList.remove('hidden');
+}
+
 function setupProductivityEvents() {
   $('addHabitBtn')?.addEventListener('click', () => openHabitModal(null));
+  $('habitScheduleType')?.addEventListener('change', toggleHabitScheduleFields);
+
   $('habitForm')?.addEventListener('submit', e => {
     e.preventDefault();
     const name = $('habitNameInput').value.trim();
     if (!name) return;
     const id = $('habitEditId').value;
+    const category = $('habitCategory')?.value || 'kerja';
+    const icon = ($('habitIcon')?.value || '').trim() || CAT_ICONS[category] || '✨';
+    const st = $('habitScheduleType')?.value || 'daily';
+    let schedule = { type: 'daily' };
+    if (st === 'weekly') schedule = { type: 'weekly', target: Number($('habitWeeklyTarget')?.value || 3) };
+    if (st === 'days') {
+      const days = Array.from(document.querySelectorAll('#habitDaysPicker input:checked')).map(c => Number(c.value));
+      schedule = { type: 'days', days };
+    }
+    const archived = !!$('habitArchived')?.checked;
     if (id) {
       const h = prodData.habits.find(x => x.id === id);
-      if (h) h.name = name;
+      if (h) { h.name = name; h.category = category; h.icon = icon; h.schedule = schedule; h.archived = archived; }
       toast('Kebiasaan diperbarui', 'success');
     } else {
-      prodData.habits.push({ id: newId(), name, streak: 0, longest: 0, doneToday: false });
+      prodData.habits.push({
+        id: newId(), name, streak: 0, longest: 0, doneToday: false,
+        history: {}, schedule, icon, category, archived, freezes: 1, freezeUsedMonth: ''
+      });
       toast('Kebiasaan ditambahkan', 'success');
     }
     saveProd();
     $('habitModal').classList.add('hidden');
     renderHabits();
   });
+
   $('habitDeleteBtn')?.addEventListener('click', async () => {
     const id = $('habitEditId').value;
     if (!id) return;
@@ -1605,73 +2165,174 @@ function setupProductivityEvents() {
     toast('Kebiasaan dihapus', 'info');
   });
 
-  // Mood
-  document.querySelectorAll('.mood-btn').forEach(b => {
-    b.addEventListener('click', () => {
-      selectedMood = Number(b.dataset.mood);
-      document.querySelectorAll('.mood-btn').forEach(x => x.classList.toggle('selected', Number(x.dataset.mood) === selectedMood));
+  document.querySelectorAll('#habitCatFilters .habit-cat-chip').forEach(btn => {
+    btn.addEventListener('click', () => {
+      habitCatFilter = btn.dataset.cat;
+      document.querySelectorAll('#habitCatFilters .habit-cat-chip').forEach(b => b.classList.toggle('active', b === btn));
+      renderHabits();
     });
   });
+
+  // Mood picker (dashboard)
+  document.querySelectorAll('#moodPicker .mood-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      selectedMood = Number(b.dataset.mood);
+      document.querySelectorAll('#moodPicker .mood-btn').forEach(x => x.classList.toggle('selected', Number(x.dataset.mood) === selectedMood));
+    });
+  });
+
+  document.querySelectorAll('#moodTagRow .mood-tag-chip[data-tag]').forEach(c => {
+    c.addEventListener('click', () => {
+      const t = c.dataset.tag;
+      if (selectedMoodTags.includes(t)) selectedMoodTags = selectedMoodTags.filter(x => x !== t);
+      else selectedMoodTags.push(t);
+      c.classList.toggle('selected', selectedMoodTags.includes(t));
+    });
+  });
+
+  $('moodTagCustomBtn')?.addEventListener('click', async () => {
+    const t = await askText({ title: 'Tag kustom', message: 'Nama tag baru', label: 'Tag', placeholder: 'Misal: Olahraga' });
+    if (!t || !String(t).trim()) return;
+    const tag = String(t).trim().slice(0, 20);
+    if (!selectedMoodTags.includes(tag)) selectedMoodTags.push(tag);
+    toast('Tag ditambahkan', 'success');
+  });
+
   $('saveMoodBtn')?.addEventListener('click', () => {
     if (!selectedMood && !prodData.moodToday) { toast('Pilih mood dulu', 'info'); return; }
     const mood = selectedMood || prodData.moodToday;
-    prodData.moodToday = mood;
-    prodData.moodNote = ($('moodNote')?.value || '').trim();
+    const note = ($('moodNote')?.value || '').trim();
     const today = localDate();
+    prodData.moodToday = mood;
+    prodData.moodNote = note;
     const existing = prodData.moodHistory.find(m => m.date === today);
-    if (existing) existing.mood = mood;
-    else prodData.moodHistory.push({ date: today, mood });
+    if (existing) { existing.mood = mood; existing.note = note; existing.tags = [...selectedMoodTags]; }
+    else prodData.moodHistory.push({ date: today, mood, note, tags: [...selectedMoodTags] });
+    prodData.moodStreak = computeMoodStreak();
     saveProd();
     renderMoodUI();
     toast('Mood hari ini disimpan', 'success');
   });
-}
-function renderMoodUI() {
-  ensureProdToday();
-  selectedMood = prodData.moodToday;
-  document.querySelectorAll('.mood-btn').forEach(b => {
-    b.classList.toggle('selected', Number(b.dataset.mood) === selectedMood);
-  });
-  if ($('moodNote') && prodData.moodNote) $('moodNote').value = prodData.moodNote;
 
-  const chart = $('moodChart');
-  if (!chart) return;
-  const hist = prodData.moodHistory.slice(-14);
-  if (!hist.length) { chart.innerHTML = ''; return; }
-  const w = 260, h = 68, pad = 6;
-  const pts = hist.map((m, i) => {
-    const x = pad + (i / Math.max(1, hist.length - 1)) * (w - pad * 2);
-    const y = h - pad - ((m.mood - 1) / 4) * (h - pad * 2);
-    return [x, y];
+  document.querySelectorAll('#moodEditPicker .mood-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      moodEditSelected = Number(b.dataset.mood);
+      document.querySelectorAll('#moodEditPicker .mood-btn').forEach(x => x.classList.toggle('selected', Number(x.dataset.mood) === moodEditSelected));
+    });
   });
-  const line = pts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
-  const area = line + ` L${pts[pts.length - 1][0]},${h} L${pts[0][0]},${h} Z`;
-  chart.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-    <defs><linearGradient id="moodGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#EA580C" stop-opacity="0.22"/><stop offset="100%" stop-color="#EA580C" stop-opacity="0"/>
-    </linearGradient></defs>
-    <path d="${area}" fill="url(#moodGrad)"/>
-    <path d="${line}" fill="none" stroke="#EA580C" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-    ${pts.map(p => `<circle cx="${p[0]}" cy="${p[1]}" r="2.8" fill="#EA580C"/>`).join('')}
-  </svg>`;
+
+  $('moodEditForm')?.addEventListener('submit', e => {
+    e.preventDefault();
+    const date = $('moodEditDate').value;
+    const m = prodData.moodHistory.find(x => x.date === date);
+    if (!m) return;
+    m.mood = moodEditSelected || m.mood;
+    m.note = ($('moodEditNote').value || '').trim();
+    m.tags = ($('moodEditTags').value || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (date === localDate()) {
+      prodData.moodToday = m.mood;
+      prodData.moodNote = m.note;
+    }
+    saveProd();
+    $('moodEditModal').classList.add('hidden');
+    renderMoodUI();
+    toast('Jurnal diperbarui', 'success');
+  });
+
+  $('moodDeleteBtn')?.addEventListener('click', async () => {
+    const date = $('moodEditDate').value;
+    if (!await askConfirm('Hapus entri mood ini?', { title: 'Hapus', confirmText: 'Hapus', danger: true })) return;
+    prodData.moodHistory = prodData.moodHistory.filter(m => m.date !== date);
+    if (date === localDate()) { prodData.moodToday = null; prodData.moodNote = ''; }
+    saveProd();
+    $('moodEditModal').classList.add('hidden');
+    renderMoodUI();
+    toast('Entri dihapus', 'info');
+  });
+
+  $('moodMonthPrev')?.addEventListener('click', () => {
+    if (!moodMonthCursor) moodMonthCursor = new Date();
+    moodMonthCursor = new Date(moodMonthCursor.getFullYear(), moodMonthCursor.getMonth() - 1, 1);
+    renderMoodMonthChart();
+  });
+  $('moodMonthNext')?.addEventListener('click', () => {
+    if (!moodMonthCursor) moodMonthCursor = new Date();
+    moodMonthCursor = new Date(moodMonthCursor.getFullYear(), moodMonthCursor.getMonth() + 1, 1);
+    renderMoodMonthChart();
+  });
+
+  $('openRecapBtn')?.addEventListener('click', openRecapModal);
+  $('copyRecapBtn')?.addEventListener('click', async () => {
+    const t = window.__recapText || '';
+    try {
+      await navigator.clipboard.writeText(t);
+      toast('Rekap disalin', 'success');
+    } catch {
+      await showAlert(t || 'Tidak ada teks');
+    }
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      rollOverDay();
+      renderHabits();
+      renderMoodUI();
+    }
+  });
 }
+
+function refreshProductivityUI() {
+  if (!prodData) return;
+  renderHabits();
+  renderMoodUI();
+}
+
 
 /* ══════════ INIT ══════════ */
+function initTheme() {
+  const t = localStorage.getItem('akasha_theme') || (localStorage.getItem('darkMode') === 'true' ? 'dark' : 'light');
+  applyTheme(t);
+  document.querySelectorAll('#themePicker .theme-opt').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.theme === t);
+    btn.addEventListener('click', () => {
+      applyTheme(btn.dataset.theme);
+      document.querySelectorAll('#themePicker .theme-opt').forEach(b => b.classList.toggle('active', b === btn));
+    });
+  });
+  // keep legacy toggle in sync if present
+  const legacy = $('darkModeToggle');
+  if (legacy) {
+    legacy.checked = t === 'dark';
+    legacy.addEventListener('change', e => applyTheme(e.target.checked ? 'dark' : 'light'));
+  }
+}
+function applyTheme(t) {
+  document.body.classList.remove('dark-mode', 'theme-playful');
+  if (t === 'dark') document.body.classList.add('dark-mode');
+  if (t === 'playful') document.body.classList.add('theme-playful');
+  localStorage.setItem('akasha_theme', t);
+  localStorage.setItem('darkMode', t === 'dark' ? 'true' : 'false');
+}
+
 function init() {
   setDefaultDates();
-  initDarkMode();
+  initTheme();
   enhanceAllSelects();
-  loadProd();
+  loadProdLocal();
   setupEventListeners();
   setupProductivityEvents();
-  onAuthStateChanged(auth, user => {
+  onAuthStateChanged(auth, async user => {
     if (user) {
       state.user = user;
       startNotifications();
       const ref = doc(db, 'users', user.uid);
       getDoc(ref).then(snap => {
         if (!snap.exists()) setDoc(ref, { email: user.email, displayName: user.displayName || user.email.split('@')[0], workspaceIds: [], createdAt: serverTimestamp() });
-      }).finally(() => showDashboardView());
+      });
+      await loadProdFromCloud();
+      rollOverDay();
+      showDashboardView();
+      refreshProductivityUI();
     } else {
       stopHeartbeat();
       unsubscribers.forEach(u => u()); unsubscribers = [];

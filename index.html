@@ -87,7 +87,7 @@
     <nav class="sidebar-menu" aria-label="Navigasi utama">
       <button class="menu-item active" id="dashboardNavBtn" title="Dashboard"><span class="menu-icon" aria-hidden="true">▦</span><span class="menu-label">Dashboard</span></button>
       <button class="menu-item" id="myWorkspacesNavBtn" title="Ruang kerja saya"><span class="menu-icon" aria-hidden="true">▣</span><span class="menu-label">Ruang Kerja</span></button>
-      <button class="menu-item" id="notificationsNavBtn" title="Notifikasi"><span class="menu-icon" aria-hidden="true">◔</span><span class="menu-label">Notifikasi</span><span class="nav-badge hidden" id="notifBadge">0</span></button>
+      <button class="menu-item" id="notificationsNavBtn" title="Notifikasi" aria-label="Notifikasi"><span class="menu-icon" aria-hidden="true">◔</span><span class="menu-label">Notifikasi</span><span class="nav-badge hidden" id="notifBadge"></span></button>
       <button class="menu-item" id="accountBtn" title="Pengaturan akun"><span class="menu-icon" aria-hidden="true">⚙</span><span class="menu-label">Akun</span></button>
     </nav>
     <div class="sidebar-footer">
@@ -116,6 +116,12 @@
           <span id="welcomeText">Selamat datang kembali. Ringkasan tugas, tenggat, dan ruang kerja Anda ada di bawah.</span>
         </div>
 
+        <!-- Soft reminder (productivity) -->
+        <div class="welcome-alert reminder-banner hidden" id="prodReminderBanner">
+          <span class="welcome-dot" aria-hidden="true"></span>
+          <span id="prodReminderText"></span>
+        </div>
+
         <!-- Stats 4 kolom -->
         <div class="stats-grid dash-stats" id="dashboardSummary"></div>
 
@@ -130,6 +136,12 @@
                 </div>
                 <button class="btn-sm btn-solid" id="addHabitBtn" type="button">Tambah kebiasaan</button>
               </div>
+              <div class="habit-cat-filters" id="habitCatFilters" role="group" aria-label="Filter kategori">
+                <button type="button" class="habit-cat-chip active" data-cat="all">Semua</button>
+                <button type="button" class="habit-cat-chip" data-cat="sehat">Sehat</button>
+                <button type="button" class="habit-cat-chip" data-cat="kerja">Kerja</button>
+                <button type="button" class="habit-cat-chip" data-cat="belajar">Belajar</button>
+              </div>
               <div class="habit-layout">
                 <div class="habit-list" id="habitList"></div>
                 <div class="habit-graph-wrap">
@@ -141,6 +153,20 @@
                     <span>Rajin</span>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Insight korelasi -->
+            <div class="card" id="insightCard">
+              <div class="section-head">
+                <div>
+                  <h3>Insight</h3>
+                  <p class="subtitle">Hubungan kebiasaan dan mood kamu.</p>
+                </div>
+                <button class="btn-sm btn-ghost" id="openRecapBtn" type="button">Lihat rekap</button>
+              </div>
+              <div id="insightBody" class="insight-body">
+                <p class="empty-hint">Belum cukup data</p>
               </div>
             </div>
 
@@ -168,7 +194,10 @@
           <aside class="dash-side">
             <!-- Mood hari ini -->
             <div class="card mood-card">
-              <h3>Mood hari ini</h3>
+              <div class="mood-title-row">
+                <h3>Mood hari ini</h3>
+                <span class="mood-streak-pill hidden" id="moodStreakPill"></span>
+              </div>
               <p class="subtitle">Pilih satu, tulis satu kalimat.</p>
               <div class="mood-picker" id="moodPicker" role="group" aria-label="Pilih mood">
                 <button type="button" class="mood-btn" data-mood="1" aria-label="Sangat buruk">😢</button>
@@ -177,13 +206,30 @@
                 <button type="button" class="mood-btn" data-mood="4" aria-label="Baik">😊</button>
                 <button type="button" class="mood-btn" data-mood="5" aria-label="Sangat baik">😄</button>
               </div>
+              <div class="mood-tag-row" id="moodTagRow">
+                <button type="button" class="mood-tag-chip" data-tag="Tidur">Tidur</button>
+                <button type="button" class="mood-tag-chip" data-tag="Kerjaan">Kerjaan</button>
+                <button type="button" class="mood-tag-chip" data-tag="Keluarga">Keluarga</button>
+                <button type="button" class="mood-tag-chip" data-tag="Teman">Teman</button>
+                <button type="button" class="mood-tag-chip" data-tag="Kesehatan">Kesehatan</button>
+                <button type="button" class="mood-tag-chip mood-tag-custom" id="moodTagCustomBtn">+ Tag</button>
+              </div>
               <div class="mood-form">
                 <input type="text" id="moodNote" placeholder="Tulis satu kalimat singkat…" maxlength="80" />
                 <button type="button" class="btn-sm btn-solid" id="saveMoodBtn">Simpan</button>
               </div>
               <div class="mood-chart-wrap">
-                <div class="mini-title">Tren bulan ini</div>
+                <div class="mood-month-nav">
+                  <button type="button" class="btn-sm btn-ghost" id="moodMonthPrev" aria-label="Bulan sebelumnya">‹</button>
+                  <div class="mini-title" id="moodMonthLabel">Tren bulan ini</div>
+                  <button type="button" class="btn-sm btn-ghost" id="moodMonthNext" aria-label="Bulan berikutnya">›</button>
+                </div>
+                <div class="mood-month-stats" id="moodMonthStats"></div>
                 <div class="mood-chart" id="moodChart"></div>
+              </div>
+              <div class="mood-journal-wrap">
+                <div class="mini-title">Jurnal mood</div>
+                <div id="moodJournalList" class="mood-journal-list"></div>
               </div>
             </div>
 
@@ -528,9 +574,23 @@
       <div class="form-group"><label for="accountPassword">Kata sandi baru</label><input type="password" id="accountPassword" class="field" autocomplete="new-password" placeholder="Kosongkan bila tidak diganti" /></div>
       <button type="submit" class="btn-primary">Simpan perubahan</button>
     </form>
-    <div class="dark-mode-section">
-      <div class="dark-mode-header"><span class="dark-mode-icon" aria-hidden="true">◐</span><div><strong>Mode gelap</strong><p>Latar arang untuk ruangan minim cahaya.</p></div></div>
-      <label class="toggle-switch"><input type="checkbox" id="darkModeToggle" /><span class="toggle-slider"></span><span class="sr-only">Aktifkan mode gelap</span></label>
+    <div class="theme-section">
+      <div class="mini-title" style="margin-bottom:.6rem">Tema tampilan</div>
+      <div class="theme-picker" id="themePicker" role="group" aria-label="Pilih tema">
+        <button type="button" class="theme-opt" data-theme="light" title="Terang">
+          <span class="theme-swatch theme-swatch-light"></span>
+          <span>Terang</span>
+        </button>
+        <button type="button" class="theme-opt" data-theme="dark" title="Gelap">
+          <span class="theme-swatch theme-swatch-dark"></span>
+          <span>Gelap</span>
+        </button>
+        <button type="button" class="theme-opt" data-theme="playful" title="Playful">
+          <span class="theme-swatch theme-swatch-playful"></span>
+          <span>Playful</span>
+        </button>
+      </div>
+      <label class="toggle-switch hidden" aria-hidden="true"><input type="checkbox" id="darkModeToggle" /><span class="toggle-slider"></span></label>
     </div>
   </div>
 </div>
@@ -588,11 +648,94 @@
         <label for="habitNameInput">Nama kebiasaan *</label>
         <input type="text" id="habitNameInput" class="field" placeholder="Contoh: Ngoding 1 jam" maxlength="40" required />
       </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="habitCategory">Kategori</label>
+          <select id="habitCategory" class="field">
+            <option value="kerja">Kerja</option>
+            <option value="sehat">Sehat</option>
+            <option value="belajar">Belajar</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="habitIcon">Ikon (emoji)</label>
+          <input type="text" id="habitIcon" class="field" placeholder="✨" maxlength="4" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="habitScheduleType">Jadwal</label>
+        <select id="habitScheduleType" class="field">
+          <option value="daily">Setiap hari</option>
+          <option value="weekly">Target per minggu</option>
+          <option value="days">Hari tertentu</option>
+        </select>
+      </div>
+      <div class="form-group hidden" id="habitWeeklyTargetWrap">
+        <label for="habitWeeklyTarget">Target hari / minggu</label>
+        <input type="number" id="habitWeeklyTarget" class="field" min="1" max="7" value="3" />
+      </div>
+      <div class="form-group hidden" id="habitDaysWrap">
+        <label>Hari aktif</label>
+        <div class="habit-days-picker" id="habitDaysPicker">
+          <label class="day-chip"><input type="checkbox" value="1" /> Sen</label>
+          <label class="day-chip"><input type="checkbox" value="2" /> Sel</label>
+          <label class="day-chip"><input type="checkbox" value="3" /> Rab</label>
+          <label class="day-chip"><input type="checkbox" value="4" /> Kam</label>
+          <label class="day-chip"><input type="checkbox" value="5" /> Jum</label>
+          <label class="day-chip"><input type="checkbox" value="6" /> Sab</label>
+          <label class="day-chip"><input type="checkbox" value="0" /> Min</label>
+        </div>
+      </div>
+      <label class="remember-me" for="habitArchived"><input type="checkbox" id="habitArchived" /> Arsipkan (sembunyikan dari daftar utama)</label>
       <div class="dialog-actions" style="margin-top:1rem">
         <button type="button" class="btn-sm btn-ghost hidden" id="habitDeleteBtn">Hapus</button>
         <button type="submit" class="btn-sm btn-solid" id="habitSaveBtn">Simpan</button>
       </div>
     </form>
+  </div>
+</div>
+
+<div id="moodEditModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="moodEditTitle">
+  <div class="modal-content">
+    <button class="close-modal" data-close="moodEditModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title" id="moodEditTitle">Edit jurnal mood</h2>
+    <form id="moodEditForm">
+      <input type="hidden" id="moodEditDate" value="" />
+      <div class="form-group">
+        <label>Mood</label>
+        <div class="mood-picker" id="moodEditPicker" role="group">
+          <button type="button" class="mood-btn" data-mood="1" aria-label="Sangat buruk">😢</button>
+          <button type="button" class="mood-btn" data-mood="2" aria-label="Buruk">😟</button>
+          <button type="button" class="mood-btn" data-mood="3" aria-label="Biasa">😐</button>
+          <button type="button" class="mood-btn" data-mood="4" aria-label="Baik">😊</button>
+          <button type="button" class="mood-btn" data-mood="5" aria-label="Sangat baik">😄</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="moodEditNote">Catatan</label>
+        <input type="text" id="moodEditNote" class="field" maxlength="80" />
+      </div>
+      <div class="form-group">
+        <label for="moodEditTags">Tag (pisahkan koma)</label>
+        <input type="text" id="moodEditTags" class="field" placeholder="Tidur, Kerjaan" />
+      </div>
+      <div class="dialog-actions">
+        <button type="button" class="btn-sm btn-danger" id="moodDeleteBtn">Hapus</button>
+        <button type="submit" class="btn-sm btn-solid">Simpan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="recapModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="recapTitle">
+  <div class="modal-content modal-content-lg">
+    <button class="close-modal" data-close="recapModal" aria-label="Tutup">×</button>
+    <h2 class="modal-title" id="recapTitle">Rekap bulanan</h2>
+    <div id="recapBody" class="recap-body"></div>
+    <div class="dialog-actions">
+      <button type="button" class="btn-sm btn-ghost" data-close="recapModal">Tutup</button>
+      <button type="button" class="btn-sm btn-solid" id="copyRecapBtn">Salin rekap</button>
+    </div>
   </div>
 </div>
 
