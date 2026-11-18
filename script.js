@@ -38,7 +38,7 @@ let currentDetailId = null;
 const autoStarted = new Set();
 const $ = (id) => document.getElementById(id);
 
-/* ══════════ UTIL ══════════ */
+// Utilitas
 function escapeHtml(str) {
   return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -98,7 +98,7 @@ function isOnline(lastActive) {
 }
 const newId = () => Math.random().toString(36).slice(2, 9);
 
-/* ══════════ IN-APP DIALOG (pengganti alert/confirm/prompt) ══════════ */
+// Dialog dalam aplikasi, pengganti alert, confirm, dan prompt
 let dialogResolve = null, dialogValidator = null;
 function openDialog(o) {
   return new Promise(resolve => {
@@ -143,7 +143,7 @@ const showAlert = (message, title = 'Perhatian') => openDialog({ title, message,
 const askConfirm = (message, o = {}) => openDialog({ title: o.title || 'Konfirmasi', message, confirmText: o.confirmText || 'Ya, lanjut', danger: o.danger });
 const askText = o => openDialog({ ...o, input: true });
 
-/* ══════════ CUSTOM SELECT ══════════ */
+// Pilihan kustom (select)
 function closeAllSelects(except) {
   document.querySelectorAll('.select-panel').forEach(p => {
     if (p === except) return;
@@ -166,7 +166,7 @@ function enhanceSelect(sel) {
   trigger.type = 'button'; trigger.className = 'select-trigger';
   trigger.setAttribute('aria-haspopup', 'listbox'); trigger.setAttribute('aria-expanded', 'false');
   const val = document.createElement('span'); val.className = 'select-value';
-  const caret = document.createElement('span'); caret.className = 'select-caret'; caret.textContent = '▾'; caret.setAttribute('aria-hidden', 'true');
+  const caret = document.createElement('span'); caret.className = 'select-caret'; caret.innerHTML = '<svg class="ic"><use href="#i-caret"/></svg>'; caret.setAttribute('aria-hidden', 'true');
   trigger.append(val, caret);
 
   const panel = document.createElement('div');
@@ -187,7 +187,7 @@ function enhanceSelect(sel) {
       b.setAttribute('aria-selected', String(opt.value === sel.value));
       const t = document.createElement('span'); t.textContent = opt.textContent.trim();
       b.appendChild(t);
-      if (opt.value === sel.value) { const c = document.createElement('span'); c.className = 'select-check'; c.textContent = '✓'; b.appendChild(c); }
+      if (opt.value === sel.value) { const c = document.createElement('span'); c.className = 'select-check'; c.innerHTML = '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>'; b.appendChild(c); }
       b.addEventListener('click', () => {
         sel.value = opt.value;
         sel.dispatchEvent(new Event('change', { bubbles: true }));
@@ -230,21 +230,6 @@ function enhanceSelect(sel) {
 }
 function enhanceAllSelects() { document.querySelectorAll('select[data-enhance]').forEach(enhanceSelect); }
 
-/* ══════════ DARK MODE ══════════ */
-function initDarkMode() {
-  const saved = localStorage.getItem('darkMode');
-  if (saved === 'true') document.body.classList.add('dark-mode');
-  const t = $('darkModeToggle');
-  if (t) {
-    t.checked = saved === 'true';
-    t.addEventListener('change', e => {
-      document.body.classList.toggle('dark-mode', e.target.checked);
-      localStorage.setItem('darkMode', e.target.checked ? 'true' : 'false');
-    });
-  }
-}
-
-/* ══════════ HEARTBEAT ══════════ */
 function startHeartbeat() {
   stopHeartbeat();
   const beat = async () => {
@@ -257,7 +242,7 @@ function startHeartbeat() {
 }
 function stopHeartbeat() { if (heartbeatInterval) { clearInterval(heartbeatInterval); heartbeatInterval = null; } }
 
-/* ══════════ VIEWS ══════════ */
+// Pergantian tampilan
 function showAuthView() {
   $('authView').classList.remove('hidden');
   $('dashboardView').classList.add('hidden');
@@ -320,7 +305,7 @@ function switchWorkspaceTab(tab) {
   if (tab === 'team') renderTeamPanel();
 }
 
-/* ══════════ AUTH ══════════ */
+// Autentikasi
 function toggleAuthMode() {
   const isLogin = !$('loginForm').classList.contains('hidden');
   $('loginForm').classList.toggle('hidden', isLogin);
@@ -333,7 +318,7 @@ async function handleLogin(e) {
   const email = $('loginEmail').value.trim();
   const password = $('loginPassword').value;
   const btn = $('loginBtn');
-  btn.disabled = true; btn.textContent = '⏳ Masuk…';
+  btn.disabled = true; btn.textContent = 'Masuk…';
   try {
     await setPersistence(auth, $('rememberMe').checked ? browserLocalPersistence : browserSessionPersistence);
     await signInWithEmailAndPassword(auth, email, password);
@@ -346,7 +331,7 @@ async function handleRegister(e) {
   const email = $('registerEmail').value.trim();
   const password = $('registerPassword').value;
   const btn = $('registerBtn');
-  btn.disabled = true; btn.textContent = '⏳ Mendaftar…';
+  btn.disabled = true; btn.textContent = 'Mendaftar…';
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
@@ -361,7 +346,7 @@ async function handleLogout() {
   await signOut(auth);
 }
 
-/* ══════════ DASHBOARD DATA ══════════ */
+// Data dashboard
 function summarizeTasks(tasks, role, myName) {
   const mine = role === 'worker' ? tasks.filter(t => t.assignee === myName) : tasks;
   const c = { todo: 0, progress: 0, review: 0, done: 0, overdue: 0 };
@@ -416,7 +401,7 @@ function renderWorkspaceList(workspaces) {
     const waiting = s.action || 0;
     const roleLabel = ws.role === 'mentor' ? 'Mentor' : 'Member';
     const roleClass = ws.role === 'mentor' ? 'badge-role-mentor' : 'badge-role-member';
-    return `<div class="ws-card-item" role="button" tabindex="0" onclick="openWorkspace('${ws.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openWorkspace('${ws.id}')}">
+    return `<article class="ws-card-item">
       <div class="ws-card-top">
         <div>
           <div class="ws-card-name">${escapeHtml(ws.name)}</div>
@@ -430,16 +415,16 @@ function renderWorkspaceList(workspaces) {
       </div>
       <div class="ws-card-foot">
         <span class="ws-code-label">KODE ${escapeHtml(code || '-')}</span>
-        <button type="button" class="btn-sm btn-ghost" onclick="event.stopPropagation();openWorkspace('${ws.id}')">Buka ruang</button>
+        <button type="button" class="btn-sm btn-ghost ws-card-open" aria-label="Buka ruang ${escapeHtml(ws.name)}" onclick="openWorkspace('${ws.id}')">Buka ruang</button>
       </div>
-    </div>`;
+    </article>`;
   };
   const empty = '<p class="empty-hint">Belum ada ruang kerja. Buat atau gabung dengan kode undangan.</p>';
   const joinCard = `<div class="ws-card-item ws-join-card-item">
-    <h3 style="font-size:.95rem;font-weight:700">Punya kode undangan?</h3>
-    <p style="font-size:.8rem;color:var(--text-muted)">Masukkan 6 karakter dari mentormu.</p>
+    <h3 class="ws-card-name">Punya kode undangan?</h3>
+    <p class="ws-card-meta">Masukkan 6 karakter dari mentormu.</p>
     <div class="ws-join-form">
-      <input type="text" id="inlineJoinCode" maxlength="6" class="field code-field" placeholder="ABC123" />
+      <input type="text" id="inlineJoinCode" aria-label="Kode undangan" maxlength="6" class="field code-field" placeholder="ABC123" />
       <button type="button" class="btn-sm btn-solid" id="inlineJoinBtn">Gabung</button>
     </div>
   </div>`;
@@ -459,11 +444,11 @@ function renderWorkspaceList(workspaces) {
           const total = s.total || 0;
           const done = s.c?.done || 0;
           const progress = total ? Math.round((done / total) * 100) : 0;
-          return `<div class="ws-card-item" style="padding:.85rem;cursor:pointer;margin-bottom:.5rem" onclick="openWorkspace('${ws.id}')">
-            <div class="ws-card-name" style="font-size:.9rem">${escapeHtml(ws.name)}</div>
-            <div class="ws-progress-bar" style="margin-top:.4rem"><div class="ws-progress-fill" style="width:${progress}%"></div></div>
-            <div class="ws-progress-text">${progress}% · ${s.action || 0} menunggu</div>
-          </div>`;
+          return `<button type="button" class="ws-card-item ws-preview" onclick="openWorkspace('${ws.id}')">
+            <span class="ws-card-name">${escapeHtml(ws.name)}</span>
+            <span class="ws-progress-bar"><span class="ws-progress-fill" style="width:${progress}%"></span></span>
+            <span class="ws-progress-text">${progress}% · ${s.action || 0} menunggu</span>
+          </button>`;
         }).join('')
       : '<p class="empty-hint">Belum ada ruang kerja.</p>';
   }
@@ -477,14 +462,14 @@ window.copyJoinCode = async (code) => {
   }
 };
 function notifMarkup(item) {
-  return `<article class="dashboard-notification-item" onclick="openWorkspace('${item.workspaceId}')">
-    <span class="notification-status-dot ${item.kind === 'done' ? 'is-done' : 'is-action'}"></span>
-    <div class="dashboard-notification-copy">
+  return `<button type="button" class="dashboard-notification-item" onclick="openWorkspace('${item.workspaceId}')">
+    <span class="notification-status-dot ${item.kind === 'done' ? 'is-done' : 'is-action'}" aria-hidden="true"></span>
+    <span class="dashboard-notification-copy">
       <strong>${escapeHtml(item.title || 'Tugas tanpa judul')}</strong>
-      <p>${escapeHtml(item.workspaceName)} · ${item.kind === 'done' ? 'Tugas selesai' : (item.role === 'mentor' ? 'Menunggu penilaian' : 'Perlu tindakan')}</p>
-    </div>
+      <span class="notif-sub">${escapeHtml(item.workspaceName)} · ${item.kind === 'done' ? 'Tugas selesai' : (item.role === 'mentor' ? 'Menunggu penilaian' : 'Perlu tindakan')}</span>
+    </span>
     <span class="notification-kind ${item.kind}">${item.kind === 'done' ? 'Selesai' : 'Perlu tindakan'}</span>
-  </article>`;
+  </button>`;
 }
 function renderDashboardNotifications() {
   dashboardNotifications = [];
@@ -518,11 +503,11 @@ function renderMiniCalendar() {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   el.innerHTML = items.slice(0, 8).map(({ t, ws, date }) => {
     const lv = dueLevel(t);
-    return `<div class="mini-cal-item ${lv ? 'due-' + lv : ''}" onclick="openWorkspace('${ws.id}')">
-      <div class="mini-cal-date"><span class="day">${date.getDate()}</span><span class="mon">${months[date.getMonth()]}</span></div>
-      <div class="mini-cal-info"><strong>${escapeHtml(t.title)}</strong><small>${escapeHtml(ws.name)} · ${escapeHtml(t.assignee)}</small></div>
+    return `<button type="button" class="mini-cal-item ${lv ? 'due-' + lv : ''}" onclick="openWorkspace('${ws.id}')">
+      <span class="mini-cal-date"><span class="day">${date.getDate()}</span><span class="mon">${months[date.getMonth()]}</span></span>
+      <span class="mini-cal-info"><strong>${escapeHtml(t.title)}</strong><small>${escapeHtml(ws.name)} · ${escapeHtml(t.assignee)}</small></span>
       ${lv ? `<span class="due-badge due-${lv}">${dueLabel(t)}</span>` : ''}
-    </div>`;
+    </button>`;
   }).join('');
 }
 function renderDashboardSummary() {
@@ -543,9 +528,7 @@ function renderDashboardSummary() {
     <div class="summary-item stat-warning"><div class="num">${soon || action}</div><div class="lbl">Tenggat mendekat</div></div>
     <div class="summary-item stat-danger"><div class="num">${overdue}</div><div class="lbl">Terlambat</div></div>`;
 
-  // Render task list for dashboard
   renderDashboardTaskList();
-  // Personal productivity features
   renderHabits();
   renderMoodUI();
   renderGreeting();
@@ -566,7 +549,7 @@ function renderDashboardTaskList() {
   }
   el.innerHTML = top.map(t => {
     const [label, cls] = statusInfo(t);
-    const due = t.endDate ? dueLabel(t) : '-';
+    const due = !t.endDate ? '-' : t.status === 'done' ? t.endDate : dueLabel(t);
     const dueCls = dueLevel(t);
     return `<button type="button" class="dash-task-row" onclick="openWorkspace('${t.workspaceId}')">
       <span class="dash-task-info">
@@ -581,7 +564,7 @@ function renderDashboardTaskList() {
   }).join('');
 }
 
-/* ══════════ WORKSPACE ══════════ */
+// Ruang kerja
 async function handleCreateWorkspace(e) {
   e.preventDefault();
   const name = $('newWorkspaceName').value.trim();
@@ -589,7 +572,7 @@ async function handleCreateWorkspace(e) {
   const drive = ($('newWorkspaceDrive')?.value || '').trim();
   if (!name || codeInput.length !== 6) return showAlert('Nama dan kode 6 karakter wajib diisi.');
   const btn = $('createWorkspaceSubmitBtn');
-  btn.disabled = true; btn.textContent = '⏳ Membuat…';
+  btn.disabled = true; btn.textContent = 'Membuat…';
   try {
     if (!(await getDocs(query(collection(db, 'workspaces'), where('joinCode', '==', codeInput), limit(1)))).empty) {
       return showAlert('Kode undangan sudah digunakan. Pilih kode lain.');
@@ -614,7 +597,7 @@ async function handleJoinWorkspace(e) {
   const code = $('joinCodeInput').value.trim().toUpperCase();
   if (code.length !== 6) return showAlert('Kode harus 6 karakter.');
   const btn = $('joinWorkspaceSubmitBtn');
-  btn.disabled = true; btn.textContent = '⏳ Mencari…';
+  btn.disabled = true; btn.textContent = 'Mencari…';
   try {
     const snap = await getDocs(query(collection(db, 'workspaces'), where('joinCode', '==', code), limit(1)));
     if (snap.empty) return showAlert('Kode undangan tidak valid.');
@@ -666,7 +649,7 @@ function backToDashboard() {
   showDashboardView();
 }
 
-/* ══════════ SUBSCRIBE ══════════ */
+// Langganan data Firestore
 function subscribeToWorkspace() {
   unsubscribers.forEach(u => u()); unsubscribers = [];
   const ws = state.workspaceId;
@@ -704,7 +687,7 @@ function subscribeToWorkspace() {
   }));
 }
 
-/* ══════════ ASSIGNEE & DRIVE ══════════ */
+// Penerima tugas dan tautan Drive
 function updateAssigneeSelect() {
   const select = $('taskAssignee'); if (!select) return;
   const workers = state.members.filter(m => m.role === 'worker');
@@ -750,7 +733,7 @@ function renderDivisionOptions() {
   s.dispatchEvent(new Event('change'));
 }
 
-/* ══════════ TASKS ══════════ */
+// Tugas
 function applyTaskFilters(list) {
   const q = ($('taskSearch')?.value || '').trim().toLowerCase();
   const st = $('filterStatus')?.value, df = $('filterDifficulty')?.value, as = $('filterAssignee')?.value;
@@ -781,12 +764,12 @@ function renderTasks() {
     const shortDesc = task.desc ? (task.desc.length > 60 ? task.desc.slice(0, 60) + '…' : task.desc) : '-';
     const diff = (task.difficulty || 'sedang').toLowerCase();
     return `<tr class="${lv ? 'row-due-' + lv : ''}" onclick="openTaskDetailModal('${task.id}')">
-      <td><div style="font-weight:600;font-size:.9rem">${escapeHtml(task.title)}${(task.attachments || []).length ? `<span class="clip-count" title="Lampiran">Lampiran ${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td>
-      <td class="task-desc-cell"><div class="task-desc" title="${escapeHtml(task.desc || '')}">${escapeHtml(shortDesc)}</div></td>
-      <td style="font-size:.85rem;color:var(--text-secondary)">${escapeHtml(task.assignee)}</td>
-      <td class="col-center"><span class="stat-pill diff-${diff}">${diff.charAt(0).toUpperCase() + diff.slice(1)}</span></td>
-      <td class="col-center"><span class="stat-pill ${statusClass}">${statusText}${overdue ? ' · Terlambat' : ''}</span></td>
-      <td style="font-size:.85rem;color:${overdue ? 'var(--danger)' : 'var(--text-secondary)'};font-weight:${overdue ? 600 : 400}">${escapeHtml(task.endDate || '-')}${lv ? `<span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''}</td>
+      <td data-label="Tugas"><div><button type="button" class="row-link">${escapeHtml(task.title)}</button>${(task.attachments || []).length ? `<span class="clip-count" title="Lampiran">Lampiran ${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td>
+      <td data-label="Instruksi" class="task-desc-cell"><div class="task-desc" title="${escapeHtml(task.desc || '')}">${escapeHtml(shortDesc)}</div></td>
+      <td data-label="Anggota" class="cell-sub">${escapeHtml(task.assignee)}</td>
+      <td data-label="Kesulitan" class="col-center"><span class="stat-pill diff-${diff}">${diff.charAt(0).toUpperCase() + diff.slice(1)}</span></td>
+      <td data-label="Status" class="col-center"><span class="stat-pill ${statusClass}">${statusText}${overdue ? ' · Terlambat' : ''}</span></td>
+      <td data-label="Tenggat" class="cell-sub${overdue ? ' cell-late' : ''}">${escapeHtml(task.endDate || '-')}${lv ? `<span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''}</td>
     </tr>`;
   }).join('');
 }
@@ -800,7 +783,7 @@ function renderDeadlineBanner(tasks) {
   el.textContent = [o ? `${o} tugas melewati tenggat` : '', u ? `${u} tugas mendekati tenggat (3 hari ke depan)` : ''].filter(Boolean).join(' dan ');
 }
 
-/* ══════════ TASK DETAIL ══════════ */
+// Detail tugas
 const taskRef = id => doc(db, 'workspaces', state.workspaceId, 'tasks', id);
 window.openTaskDetailModal = (taskId) => {
   const task = state.tasks.find(t => t.id === taskId); if (!task) return;
@@ -818,7 +801,7 @@ window.openTaskDetailModal = (taskId) => {
   const driveHref = safeUrl(task.reportFileLink || (task.driveSource === 'workspace' ? state.driveLink : ''));
   $('detailTaskDrive').innerHTML = driveHref
     ? `<a href="${escapeHtml(driveHref)}" target="_blank" rel="noopener noreferrer" class="btn-drive-modal">Buka tautan Drive</a>`
-    : '<span style="color:var(--text-faint);font-size:.85rem">Belum ada tautan</span>';
+    : '<span class="status-text">Belum ada tautan</span>';
   const revBox = $('detailRevisionBox');
   if (task.revisionNotes) { revBox.classList.remove('hidden'); $('detailRevisionNotes').textContent = task.revisionNotes; }
   else revBox.classList.add('hidden');
@@ -914,7 +897,7 @@ window.openEditTaskModal = (id) => {
   $('editTaskModal').classList.remove('hidden');
 };
 
-/* ══════════ DAILY GOAL ══════════ */
+// Target harian
 function loadDailyGoal() {
   const me = state.members.find(m => m.id === state.user?.uid);
   const d = $('dailyGoalDisplay'); if (!d) return;
@@ -926,13 +909,13 @@ function setDefaultDates() {
   if (e) e.value = localDate(new Date(Date.now() + 7 * 864e5));
 }
 
-/* ══════════ DIVISIONS & MEMBERS ══════════ */
+// Divisi dan anggota
 function renderDivisionManagement() {
   const c = $('divisionListContainer');
   if (c) {
     c.innerHTML = state.divisions.length ? state.divisions.map(d => {
       const n = state.members.filter(m => m.division === d.name).length;
-      return `<div class="div-row"><div><h4>${escapeHtml(d.name)}</h4><p>${escapeHtml(d.desc || 'Tidak ada deskripsi.')}</p></div><div class="div-row-side"><span class="div-count">${n} anggota</span><button class="btn-sm btn-warning" onclick="deleteDivision('${d.id}')">Hapus</button></div></div>`;
+      return `<div class="div-row"><div><h3>${escapeHtml(d.name)}</h3><p>${escapeHtml(d.desc || 'Tidak ada deskripsi.')}</p></div><div class="div-row-side"><span class="div-count">${n} anggota</span><button class="btn-sm btn-warning" onclick="deleteDivision('${d.id}')">Hapus</button></div></div>`;
     }).join('') : '<p class="empty-hint">Belum ada divisi terdaftar.</p>';
   }
   const p = $('memberPresenceList');
@@ -940,11 +923,11 @@ function renderDivisionManagement() {
   const tb = $('memberSettingsTableBody');
   if (tb) {
     tb.innerHTML = state.members.map(m => `<tr>
-      <td style="font-weight:600">${escapeHtml(m.name)}</td>
-      <td style="color:var(--text-muted);font-size:.85rem">${escapeHtml(m.email)}</td>
-      <td class="col-center"><span class="role-badge ${m.role}">${m.role === 'mentor' ? 'Lead' : 'Member'}</span></td>
-      <td class="col-divisi">${escapeHtml(m.division || 'Umum')}</td>
-      <td class="col-center"><div><button class="btn-sm" onclick="openEditMemberModal('${m.id}')">Edit</button>${m.id !== state.user.uid ? `<button class="btn-sm btn-warning" onclick="removeMember('${m.id}')">Keluarkan</button>` : ''}</div></td>
+      <td data-label="Nama"><strong>${escapeHtml(m.name)}</strong></td>
+      <td data-label="Email" class="cell-sub">${escapeHtml(m.email)}</td>
+      <td data-label="Peran" class="col-center"><span class="role-badge ${m.role}">${m.role === 'mentor' ? 'Lead' : 'Member'}</span></td>
+      <td data-label="Divisi" class="col-divisi">${escapeHtml(m.division || 'Umum')}</td>
+      <td data-label="Aksi" class="col-center"><div><button class="btn-sm" onclick="openEditMemberModal('${m.id}')">Edit</button>${m.id !== state.user.uid ? `<button class="btn-sm btn-warning" onclick="removeMember('${m.id}')">Keluarkan</button>` : ''}</div></td>
     </tr>`).join('');
   }
 }
@@ -1061,19 +1044,12 @@ async function renameUser(newName, oldName) {
   $('topbarUserName').textContent = newName;
 }
 
-/* ══════════ ACTIVITY & NOTIFICATIONS ══════════ */
+// Aktivitas dan notifikasi
+const actIcon = id => `<svg class="ic" aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const ACT_SVG = {
-  task: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>',
-  start: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>',
-  report: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>',
-  revision: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>',
-  done: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>',
-  reopen: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>',
-  delete: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>',
-  file: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>',
-  join: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>',
-  announce: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0"/></svg>',
-  subtask: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>'
+  task: actIcon('plus'), start: actIcon('play'), report: actIcon('upload'), revision: actIcon('loop'),
+  done: actIcon('check'), reopen: actIcon('loop'), delete: actIcon('trash'), file: actIcon('clip'),
+  join: actIcon('enter'), announce: actIcon('horn'), subtask: actIcon('list')
 };
 function logActivity(type, text, taskId = null) {
   if (!state.workspaceId) return;
@@ -1083,7 +1059,7 @@ function logActivity(type, text, taskId = null) {
 function renderActivities() {
   const el = $('activityList'); if (!el) return;
   el.innerHTML = activities.length
-    ? activities.map(a => `<div class="act-item act-${escapeHtml(a.type)}"><span class="act-icon">${ACT_SVG[a.type] || '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg>'}</span><div><div>${escapeHtml(a.text)}</div><span class="act-time">${fmtTime(a.at)}</span></div></div>`).join('')
+    ? activities.map(a => `<div class="act-item act-${escapeHtml(a.type)}"><span class="act-icon">${ACT_SVG[a.type] || actIcon('dot')}</span><div><div>${escapeHtml(a.text)}</div><span class="act-time">${fmtTime(a.at)}</span></div></div>`).join('')
     : '<p class="empty-hint">Belum ada aktivitas.</p>';
 }
 const memberUid = name => state.members.find(m => m.name === name)?.id;
@@ -1144,7 +1120,7 @@ async function markAllRead() {
   } catch (err) { await showAlert('Gagal: ' + err.message); }
 }
 
-/* ══════════ SUBTASKS & ATTACHMENTS ══════════ */
+// Sub-tugas dan lampiran
 const parseSubtasks = text => text.split('\n').map(x => x.trim()).filter(Boolean).slice(0, 30).map(x => ({ id: newId(), text: x.slice(0, 120), done: false }));
 const canEditTask = t => state.role === 'mentor' || (state.role === 'worker' && t.assignee === state.workerName);
 window.toggleSubtask = async (taskId, subId, checked) => {
@@ -1180,13 +1156,13 @@ function renderTaskExtras(task) {
   $('detailProgressText').textContent = p ? `${p.done}/${p.total} · ${p.pct}%` : '0%';
   $('detailSubtaskAdd').classList.toggle('hidden', !isLead);
   $('detailSubtaskList').innerHTML = subs.length
-    ? subs.map(s => `<label class="subtask-item ${s.done ? 'done' : ''}"><input type="checkbox" ${s.done ? 'checked' : ''} ${canEdit ? '' : 'disabled'} onchange="toggleSubtask('${task.id}','${s.id}',this.checked)" /><span>${escapeHtml(s.text)}</span>${isLead ? `<button type="button" class="icon-del" title="Hapus sub-tugas" onclick="event.preventDefault();deleteSubtask('${task.id}','${s.id}')">×</button>` : ''}</label>`).join('')
+    ? subs.map(s => `<label class="subtask-item ${s.done ? 'done' : ''}"><input type="checkbox" ${s.done ? 'checked' : ''} ${canEdit ? '' : 'disabled'} onchange="toggleSubtask('${task.id}','${s.id}',this.checked)" /><span>${escapeHtml(s.text)}</span>${isLead ? `<button type="button" class="icon-del" aria-label="Hapus sub-tugas" onclick="event.preventDefault();deleteSubtask('${task.id}','${s.id}')"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>` : ''}</label>`).join('')
     : '<p class="empty-hint">Belum ada sub-tugas.</p>';
   const files = task.attachments || [];
   $('attachUploader').classList.toggle('hidden', !canEdit);
   $('detailAttachList').innerHTML = files.length ? files.map(f => {
     const href = safeUrl(f.url), canDel = isLead || f.uid === state.user.uid;
-    return `<div class="attach-item"><div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div>${canDel ? `<button type="button" class="icon-del" title="Hapus lampiran" onclick="deleteAttachment('${task.id}','${f.id}')">×</button>` : ''}</div>`;
+    return `<div class="attach-item"><div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div>${canDel ? `<button type="button" class="icon-del" aria-label="Hapus lampiran" onclick="deleteAttachment('${task.id}','${f.id}')"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>` : ''}</div>`;
   }).join('') : '<p class="empty-hint">Belum ada lampiran.</p>';
 }
 function afterTasksUpdate() {
@@ -1218,7 +1194,7 @@ window.deleteAttachment = async (taskId, fid) => {
   catch (err) { await showAlert('Gagal: ' + err.message); }
 };
 
-/* ══════════ CALENDAR ══════════ */
+// Kalender
 let calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1), calExpanded = null;
 const chipClass = t => t.status === 'done' ? 'chip-done' : ({ overdue: 'due-overdue', urgent: 'due-urgent', soon: 'due-soon' }[dueLevel(t)] || 'chip-normal');
 window.expandCalDay = k => { calExpanded = calExpanded === k ? null : k; renderCalendar(); };
@@ -1241,13 +1217,13 @@ function renderCalendar() {
   grid.innerHTML = html;
 }
 
-/* ══════════ ANNOUNCEMENTS ══════════ */
+// Pengumuman
 function renderAnnouncements() {
   const el = $('announceList'); if (!el) return;
   const isLead = state.role === 'mentor';
   const list = [...announcements].sort((a, b) => (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0));
   el.innerHTML = list.length ? list.map(a => `<article class="announce-item ${a.pinned ? 'pinned' : ''}">
-    <div class="announce-head"><h4>${a.pinned ? 'Disematkan: ' : ''}${escapeHtml(a.title)}</h4>
+    <div class="announce-head"><h3>${a.pinned ? 'Disematkan: ' : ''}${escapeHtml(a.title)}</h3>
     ${isLead ? `<div class="announce-actions"><button type="button" class="btn-sm btn-ghost" onclick="togglePinAnnouncement('${a.id}')">${a.pinned ? 'Lepas pin' : 'Sematkan'}</button><button type="button" class="btn-sm btn-ghost" onclick="editAnnouncement('${a.id}')">Edit</button><button type="button" class="btn-sm btn-warning" onclick="deleteAnnouncement('${a.id}')">Hapus</button></div>` : ''}</div>
     <p>${escapeHtml(a.body)}</p><small>${escapeHtml(a.by || 'Lead')} · ${fmtTime(a.createdAt)}</small></article>`).join('')
     : '<p class="empty-hint">Belum ada pengumuman dari mentor.</p>';
@@ -1286,7 +1262,7 @@ async function postAnnouncement(e) {
   } catch (err) { await showAlert('Gagal: ' + err.message); }
 }
 
-/* ══════════ EVENTS ══════════ */
+// Pendengar event
 function setupEventListeners() {
   $('loginForm').addEventListener('submit', handleLogin);
   $('registerForm').addEventListener('submit', handleRegister);
@@ -1501,8 +1477,7 @@ function setupEventListeners() {
   $('announceForm').addEventListener('submit', postAnnouncement);
 }
 
-/* ══════════ SAPAAN DASHBOARD ══════════
-   Angka hanya dari data nyata (tugas, kebiasaan). Tiga status: memuat, siap, gagal (R-27). */
+// Sapaan dashboard. Angka hanya dari data nyata (tugas, kebiasaan). Tiga status: memuat, siap, gagal.
 function renderGreeting() {
   const title = $('greetTitle'); if (!title) return;
   const text = $('welcomeText'), facts = $('greetFacts'), ring = $('greetRing');
@@ -1551,10 +1526,11 @@ function renderGreeting() {
   ring.innerHTML = `<svg viewBox="0 0 80 80" width="96" height="96" aria-hidden="true"><circle class="ring-bg" cx="40" cy="40" r="34"/><circle class="ring-fg" cx="40" cy="40" r="34" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - pct / 100)).toFixed(1)}"/></svg><span class="ring-num" aria-hidden="true">${pct}%</span>`;
 }
 
-/* ══════════ PERSONAL PRODUCTIVITY v3 (habits · mood · insight) ══════════ */
+// Produktivitas pribadi: kebiasaan, mood, insight
 const PROD_KEY = 'akasha_productivity_v3';
 const PROD_KEY_V2 = 'akasha_productivity_v2';
-const MOOD_EMOJI = { 1: '😢', 2: '😟', 3: '😐', 4: '😊', 5: '😄' };
+const MOOD_LABEL = { 1: 'Sangat buruk', 2: 'Buruk', 3: 'Biasa', 4: 'Baik', 5: 'Sangat baik' };
+const moodFace = n => { const k = MOOD_LABEL[n] ? n : 3; return `<svg class="face" role="img" aria-label="${MOOD_LABEL[k]}"><use href="#f${k}"/></svg>`; };
 const CAT_ICONS = { sehat: '', kerja: '', belajar: '' }; // tanpa emoji: ikon kebiasaan memakai huruf awal nama
 const MILESTONES = [7, 21, 30, 66, 100];
 let prodData = null;
@@ -1678,7 +1654,6 @@ async function loadProdFromCloud() {
     if (snap.exists()) {
       const cloud = snap.data();
       delete cloud.updatedAt;
-      // cloud wins if newer or local empty
       const localTs = 0;
       prodData = cloud;
       normalizeProd();
@@ -1718,7 +1693,6 @@ function rollOverDay() {
   const today = localDate();
   if (prodData.lastRollDate === today) return;
 
-  // walk days from lastRollDate+1 ... yesterday
   let cursor = new Date(prodData.lastRollDate + 'T12:00:00');
   const end = new Date(today + 'T12:00:00');
   end.setDate(end.getDate() - 1);
@@ -1745,7 +1719,6 @@ function rollOverDay() {
       }
       h.doneToday = false;
     });
-    // aggregate cell
     let cell = prodData.habitHistory.find(c => c.date === ds);
     if (!cell) { cell = { date: ds, level: 0 }; prodData.habitHistory.push(cell); }
     const active = prodData.habits.filter(x => !x.archived);
@@ -1820,7 +1793,6 @@ function renderHabits() {
         progress = `<span class="habit-progress">${n}/${t} minggu ini</span>`;
       }
       const open = expandedHabitId === h.id;
-      // mini heatmap 56 days
       const cells = [];
       for (let i = 55; i >= 0; i--) {
         const d = new Date(); d.setDate(d.getDate() - i);
@@ -1836,7 +1808,7 @@ function renderHabits() {
       return `
       <div class="habit-block" data-id="${h.id}">
         <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${h.id}">
-          <button type="button" class="habit-check" data-toggle="${h.id}" aria-pressed="${h.doneToday}" aria-label="Tandai ${escapeHtml(h.name)} selesai hari ini">${h.doneToday ? '✓' : ''}</button>
+          <button type="button" class="habit-check" data-toggle="${h.id}" aria-pressed="${h.doneToday}" aria-label="Tandai ${escapeHtml(h.name)} selesai hari ini">${h.doneToday ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : ''}</button>
           <span class="habit-icon">${escapeHtml(icon)}</span>
           <button type="button" class="habit-name" aria-expanded="${open}">${escapeHtml(h.name)}</button>
           ${progress}
@@ -1911,7 +1883,6 @@ function toggleHabit(id) {
     h.history[today] = true;
     h.streak += 1;
     if (h.streak > h.longest) h.longest = h.streak;
-    // milestone
     MILESTONES.forEach(m => {
       if (h.streak === m) {
         if (!prodData.celebratedMilestones[h.id]) prodData.celebratedMilestones[h.id] = [];
@@ -1947,7 +1918,6 @@ function openHabitModal(id) {
   if ($('habitScheduleType')) $('habitScheduleType').value = h?.schedule?.type || 'daily';
   if ($('habitWeeklyTarget')) $('habitWeeklyTarget').value = h?.schedule?.target || 3;
   if ($('habitArchived')) $('habitArchived').checked = !!h?.archived;
-  // days
   const days = h?.schedule?.days || [];
   document.querySelectorAll('#habitDaysPicker input').forEach(cb => {
     cb.checked = days.map(Number).includes(Number(cb.value));
@@ -1972,7 +1942,6 @@ function renderMoodUI() {
   });
   if ($('moodNote')) $('moodNote').value = prodData.moodNote || '';
 
-  // tags selected for today
   selectedMoodTags = [];
   const todayEntry = prodData.moodHistory.find(m => m.date === localDate());
   if (todayEntry?.tags) selectedMoodTags = [...todayEntry.tags];
@@ -1980,7 +1949,6 @@ function renderMoodUI() {
     c.classList.toggle('selected', selectedMoodTags.includes(c.dataset.tag));
   });
 
-  // streak pill
   const streak = computeMoodStreak();
   prodData.moodStreak = streak;
   const pill = $('moodStreakPill');
@@ -2023,12 +1991,11 @@ function renderMoodMonthChart() {
   const stats = $('moodMonthStats');
   if (stats) {
     stats.innerHTML = moods.length
-      ? `<span class="mood-avg">${MOOD_EMOJI[Math.round(avg)] || '😐'} ${avg.toFixed(1)}</span>
-         <span class="mood-dist">${[1,2,3,4,5].map(i => `${MOOD_EMOJI[i]} ${dist[i-1]}`).join(' · ')}</span>`
+      ? `<span class="mood-avg">${moodFace(Math.round(avg))} ${avg.toFixed(1)}</span>
+         <span class="mood-dist">${[1,2,3,4,5].map(i => `<span>${moodFace(i)} ${dist[i-1]}</span>`).join('')}</span>`
       : '<span class="empty-hint">Belum ada data bulan ini</span>';
   }
 
-  // bar chart
   const w = Math.max(280, daysInMonth * 10), h = 72, pad = 4;
   let bars = '';
   for (let day = 1; day <= daysInMonth; day++) {
@@ -2037,8 +2004,7 @@ function renderMoodMonthChart() {
     const bh = mood ? ((mood / 5) * (h - pad * 2)) : 2;
     const x = pad + ((day - 1) / daysInMonth) * (w - pad * 2);
     const bw = Math.max(4, (w - pad * 2) / daysInMonth - 2);
-    const color = mood ? '#EA580C' : 'var(--border-subtle)';
-    bars += `<rect x="${x.toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" fill="${mood ? '#EA580C' : '#E7E5E4'}" opacity="${mood ? 0.85 : 0.4}"/>`;
+    bars += `<rect x="${x.toFixed(1)}" y="${(h - pad - bh).toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" rx="2" class="${mood ? 'mb' : 'mb-empty'}"/>`;
   }
   chart.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" width="100%" height="72">${bars}</svg>`;
 }
@@ -2058,7 +2024,7 @@ function renderMoodJournal() {
     const label = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
     const tags = (m.tags || []).map(t => `<span class="mood-tag-chip mini">${escapeHtml(t)}</span>`).join('');
     return `<button type="button" class="mood-journal-item" data-date="${m.date}">
-      <span class="mj-emoji">${MOOD_EMOJI[m.mood] || '😐'}</span>
+      <span class="mj-emoji">${moodFace(m.mood)}</span>
       <span class="mj-body"><span class="mj-date">${label}</span>
       ${m.note ? `<span class="mj-note">${escapeHtml(m.note)}</span>` : ''}
       <span class="mj-tags">${tags}</span></span>
@@ -2167,9 +2133,9 @@ function openRecapModal() {
   body.innerHTML = `
     <p class="recap-month">${escapeHtml(monthName)}</p>
     <ul class="recap-list">
-      <li>Rata-rata mood: <strong>${moods.length ? avg.toFixed(1) + ' ' + (MOOD_EMOJI[Math.round(avg)] || '') : '-'}</strong></li>
-      <li>Hari terbaik: <strong>${best ? best.date + ' ' + (MOOD_EMOJI[best.mood] || '') : '-'}</strong></li>
-      <li>Hari terendah: <strong>${worst ? worst.date + ' ' + (MOOD_EMOJI[worst.mood] || '') : '-'}</strong></li>
+      <li>Rata-rata mood: <strong>${moods.length ? avg.toFixed(1) + ' ' + moodFace(Math.round(avg)) : '-'}</strong></li>
+      <li>Hari terbaik: <strong>${best ? best.date + ' ' + moodFace(best.mood) : '-'}</strong></li>
+      <li>Hari terendah: <strong>${worst ? worst.date + ' ' + moodFace(worst.mood) : '-'}</strong></li>
       <li>Tag tersering: <strong>${topTag ? escapeHtml(topTag[0]) + ' (' + topTag[1] + ')' : '-'}</strong></li>
       <li>Penyelesaian kebiasaan: <strong>${habitTotal ? Math.round(habitDone / habitTotal * 100) + '%' : '-'} (${habitDone}/${habitTotal})</strong></li>
       <li>Streak terpanjang: <strong>${longest} hari</strong></li>
@@ -2232,7 +2198,6 @@ function setupProductivityEvents() {
     });
   });
 
-  // Mood picker (dashboard)
   document.querySelectorAll('#moodPicker .mood-btn').forEach(b => {
     b.addEventListener('click', () => {
       selectedMood = Number(b.dataset.mood);
@@ -2347,31 +2312,29 @@ function refreshProductivityUI() {
 }
 
 
-/* ══════════ INIT ══════════ */
+// Inisialisasi
+const THEME_COLORS = { light: '#E9F0EF', dark: '#0A1413', playful: '#BCD3FA' };
 function initTheme() {
-  const t = localStorage.getItem('akasha_theme') || (localStorage.getItem('darkMode') === 'true' ? 'dark' : 'light');
-  applyTheme(t);
-  document.querySelectorAll('#themePicker .theme-opt').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.theme === t);
-    btn.addEventListener('click', () => {
-      applyTheme(btn.dataset.theme);
-      document.querySelectorAll('#themePicker .theme-opt').forEach(b => b.classList.toggle('active', b === btn));
-    });
-  });
-  // keep legacy toggle in sync if present
-  const legacy = $('darkModeToggle');
-  if (legacy) {
-    legacy.checked = t === 'dark';
-    legacy.addEventListener('change', e => applyTheme(e.target.checked ? 'dark' : 'light'));
-  }
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  const t = localStorage.getItem('akasha_theme') || (localStorage.getItem('darkMode') === 'true' || prefersDark ? 'dark' : 'light');
+  applyTheme(t, false);
+  document.querySelectorAll('#themePicker .theme-opt').forEach(btn => btn.addEventListener('click', () => applyTheme(btn.dataset.theme)));
 }
-function applyTheme(t) {
+function applyTheme(t, persist = true) {
   document.body.classList.remove('dark-mode', 'theme-playful');
   if (t === 'dark') document.body.classList.add('dark-mode');
   if (t === 'playful') document.body.classList.add('theme-playful');
-  localStorage.setItem('akasha_theme', t);
-  localStorage.setItem('darkMode', t === 'dark' ? 'true' : 'false');
+  if (persist) localStorage.setItem('akasha_theme', t);
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[t] || THEME_COLORS.light);
+  document.querySelectorAll('#themePicker .theme-opt').forEach(b => b.classList.toggle('active', b.dataset.theme === t));
 }
+
+// Status tombol toggle (aria-pressed) mengikuti kelas selected/active, supaya pembaca layar ikut tahu
+new MutationObserver(list => list.forEach(({ target: el }) => {
+  if (el.hasAttribute?.('aria-pressed') && !el.classList.contains('habit-check')) {
+    el.setAttribute('aria-pressed', String(el.classList.contains('selected') || el.classList.contains('active')));
+  }
+})).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
 
 function init() {
   setDefaultDates();
