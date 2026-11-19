@@ -136,7 +136,7 @@
       <button class="menu-item active" id="dashboardNavBtn" title="Dashboard"><svg class="ic" aria-hidden="true"><use href="#i-compass"/></svg><span class="menu-label">Dashboard</span></button>
       <button class="menu-item" id="myWorkspacesNavBtn" title="Ruang kerja saya"><svg class="ic" aria-hidden="true"><use href="#i-boat"/></svg><span class="menu-label">Ruang Kerja</span></button>
       <button class="menu-item" id="notificationsNavBtn" title="Notifikasi" aria-label="Notifikasi"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg><span class="menu-label">Notifikasi</span><span class="nav-badge hidden" id="notifBadge"></span></button>
-      <button class="menu-item" id="accountBtn" title="Pengaturan akun"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg><span class="menu-label">Akun</span></button>
+      <button class="menu-item" id="accountBtn" title="Profil saya"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg><span class="menu-label">Profil</span></button>
     </nav>
     <div class="sidebar-footer">
       <button class="btn-logout-sidebar menu-item" id="logoutBtn" title="Keluar dari akun"><svg class="ic" aria-hidden="true"><use href="#i-exit"/></svg><span class="menu-label">Keluar</span></button>
@@ -147,7 +147,7 @@
     <h1 class="topbar-title" id="dashboardPageTitle">Dashboard</h1>
     <div class="topbar-right">
       <button class="topbar-icon-btn" id="notificationsNavBtnTop" aria-label="Buka notifikasi"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg><span class="nav-badge hidden"></span></button>
-      <button class="topbar-profile-badge" id="accountBtnTop" title="Pengaturan akun">
+      <button class="topbar-profile-badge" id="accountBtnTop" title="Buka profil saya">
         <span class="avatar-circle" id="topbarUserAvatar" aria-hidden="true">A</span>
         <span class="user-info-text"><span class="user-name" id="topbarUserName">Pengguna</span><span class="user-role" id="topbarUserRole">Member</span></span>
       </button>
@@ -321,6 +321,10 @@
         </div>
       </section>
 
+      <section id="profilePanel" class="hidden" aria-label="Profil saya">
+        <div id="profileView"></div>
+      </section>
+
     </main>
   </div>
 </div>
@@ -393,11 +397,16 @@
               <label for="taskDriveSource">Sumber tautan Drive</label>
               <select id="taskDriveSource" class="field" data-enhance>
                 <option value="workspace">Gunakan folder Drive utama ruang kerja</option>
+                <option value="task">Tautan khusus tugas ini</option>
                 <option value="individual">Anggota mengisi tautan Drive sendiri</option>
               </select>
             </div>
+            <div class="form-group hidden" id="taskDriveUrlGroup">
+              <label for="taskDriveUrl">Tautan Drive untuk tugas ini</label>
+              <input type="url" id="taskDriveUrl" class="field" placeholder="https://drive.google.com/…" />
+            </div>
             <div class="form-group" id="workspaceDriveGroup">
-              <label for="driveLinkInput">Tautan folder Google Drive</label>
+              <label for="driveLinkInput">Folder Drive utama ruang kerja (berlaku untuk semua tugas yang memakainya)</label>
               <div class="input-with-btn">
                 <input type="url" id="driveLinkInput" class="field" placeholder="https://drive.google.com/drive/folders/…" />
                 <button type="button" class="btn-primary btn-inline" id="saveDriveBtn">Simpan</button>
@@ -473,13 +482,16 @@
 
       <section id="announcementPanel" class="hidden">
         <div class="card" id="announceCreator">
-          <div class="section-head"><div><h2>Buat pengumuman</h2><p class="subtitle">Terkirim ke seluruh anggota ruang kerja ini.</p></div></div>
+          <div class="section-head"><div><h2>Pengumuman</h2><p class="subtitle">Terkirim ke seluruh anggota ruang kerja ini.</p></div>
+            <button type="button" class="btn-sm btn-solid" id="toggleAnnounceFormBtn" aria-expanded="false" aria-controls="announceFormWrap">Tulis pengumuman</button></div>
+          <div id="announceFormWrap" class="hidden">
           <form id="announceForm">
             <div class="form-group"><label for="announceTitle">Judul</label><input type="text" id="announceTitle" class="field" required /></div>
             <div class="form-group"><label for="announceBody">Isi pengumuman</label><textarea id="announceBody" class="field" rows="4" required></textarea></div>
             <label class="remember-me pin-row" for="announcePinned"><input type="checkbox" id="announcePinned" /> Sematkan di bagian atas</label>
             <button type="submit" class="btn-primary">Kirim pengumuman</button>
           </form>
+          </div>
         </div>
         <div class="card">
           <div class="section-head"><div><h2>Papan pengumuman</h2></div></div>
@@ -532,7 +544,12 @@
     <p class="modal-meta">Ditugaskan kepada <strong id="detailTaskAssignee">-</strong></p>
     <div class="detail-section detail-pills"><span id="detailTaskStatus" class="stat-pill"></span><span id="detailTaskDifficulty" class="stat-pill"></span></div>
     <div class="detail-section"><span class="detail-label">Periode</span><div id="detailTaskDates" class="detail-dates"></div></div>
-    <div class="detail-section"><span class="detail-label">Tautan Google Drive</span><div id="detailTaskDrive"></div></div>
+    <div class="detail-section"><span class="detail-label">Tautan Google Drive</span><div id="detailTaskDrive"></div>
+      <div id="detailDriveEdit" class="input-with-btn hidden">
+        <label class="sr-only" for="detailDriveInput">Tautan folder Drive</label>
+        <input type="url" id="detailDriveInput" class="field" placeholder="https://drive.google.com/…" />
+        <button type="button" class="btn-primary btn-inline" id="saveTaskDriveBtn">Simpan tautan</button>
+      </div></div>
     <div class="detail-section"><span class="detail-label">Instruksi</span><p id="detailTaskDesc" class="detail-desc"></p></div>
     <div class="detail-section" id="detailSubtaskBox">
       <div class="detail-row-head"><span class="detail-label">Sub-tugas</span><span id="detailProgressText" class="detail-progress-text">0%</span></div>
@@ -653,6 +670,7 @@
       <input type="hidden" id="editTaskId" />
       <div class="form-group"><label for="editTaskTitleInput">Judul tugas *</label><input type="text" id="editTaskTitleInput" class="field" required /></div>
       <div class="form-group"><label for="editTaskDescInput">Instruksi</label><textarea id="editTaskDescInput" class="field" rows="4"></textarea></div>
+      <div class="form-group"><label for="editTaskDriveInput">Tautan Drive khusus tugas (opsional)</label><input type="url" id="editTaskDriveInput" class="field" placeholder="https://drive.google.com/…" /></div>
       <button type="submit" class="btn-primary">Simpan tugas</button>
     </form>
   </div>
@@ -769,6 +787,13 @@
       <button type="button" class="btn-sm btn-ghost" data-close="recapModal">Tutup</button>
       <button type="button" class="btn-sm btn-solid" id="copyRecapBtn">Salin rekap</button>
     </div>
+  </div>
+</div>
+
+<div id="profileModal" class="modal hidden" role="dialog" aria-modal="true" aria-label="Profil anggota">
+  <div class="modal-content modal-content-lg modal-profile">
+    <button class="close-modal" data-close="profileModal" aria-label="Tutup profil"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
+    <div id="profileModalBody"></div>
   </div>
 </div>
 
