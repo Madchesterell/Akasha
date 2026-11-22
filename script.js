@@ -409,10 +409,10 @@ async function loadUserWorkspaces() {
       return;
     }
     const workspaces = await Promise.all(ids.map(async id => {
-      const wsSnap = await getDoc(doc(db, 'workspaces', id));
-      if (!wsSnap.exists()) return null;
       const memberSnap = await getDoc(doc(db, 'workspaces', id, 'members', state.user.uid));
       if (!memberSnap.exists()) return null;
+      const wsSnap = await getDoc(doc(db, 'workspaces', id));
+      if (!wsSnap.exists()) return null;
       const member = memberSnap.data();
       let tasks = [];
       try { tasks = (await getDocs(collection(db, 'workspaces', id, 'tasks'))).docs.map(d => ({ id: d.id, ...d.data() })); }
@@ -676,10 +676,10 @@ async function handleJoinWorkspace(e) {
 }
 window.openWorkspace = async (workspaceId) => {
   try {
-    const wsSnap = await getDoc(doc(db, 'workspaces', workspaceId));
-    if (!wsSnap.exists()) return showAlert('Ruang kerja tidak ditemukan.');
     const memberSnap = await getDoc(doc(db, 'workspaces', workspaceId, 'members', state.user.uid));
     if (!memberSnap.exists()) return showAlert('Anda bukan anggota ruang kerja ini.');
+    const wsSnap = await getDoc(doc(db, 'workspaces', workspaceId));
+    if (!wsSnap.exists()) return showAlert('Ruang kerja tidak ditemukan.');
     state.workspaceId = workspaceId;
     state.workspaceName = wsSnap.data().name;
     state.role = memberSnap.data().role;
