@@ -2,6 +2,8 @@
 // penulisan status baca dilakukan lewat fungsi mark() yang dikirim dari script.js.
 
 const initials = name => (name || '?').split(/[\s@._-]+/).filter(Boolean).slice(0, 2).map(x => x[0].toUpperCase()).join('') || '?';
+// Keamanan: ID hanya boleh huruf, angka, _ dan - sebelum masuk ke atribut handler inline.
+const sid = v => String(v ?? '').replace(/[^A-Za-z0-9_-]/g, '');
 const isLong = body => body.length > 220 || body.split('\n').length > 3;
 
 /** Hitung pembaca yang sah: anggota saat ini, selain penulis. */
@@ -23,9 +25,9 @@ function readsHtml(a, { members, isLead, showReads, escapeHtml }) {
 function actionsHtml(a, isLead) {
   if (!isLead) return '';
   return `<div class="announce-actions">
-    <button type="button" class="btn-sm btn-ghost" onclick="togglePinAnnouncement('${a.id}')">${a.pinned ? 'Lepas pin' : 'Sematkan'}</button>
-    <button type="button" class="btn-sm btn-ghost" onclick="editAnnouncement('${a.id}')">Edit</button>
-    <button type="button" class="btn-sm btn-ghost" onclick="deleteAnnouncement('${a.id}')">Hapus</button>
+    <button type="button" class="btn-sm btn-ghost" onclick="togglePinAnnouncement('${sid(a.id)}')">${a.pinned ? 'Lepas pin' : 'Sematkan'}</button>
+    <button type="button" class="btn-sm btn-ghost" onclick="editAnnouncement('${sid(a.id)}')">Edit</button>
+    <button type="button" class="btn-sm btn-ghost" onclick="deleteAnnouncement('${sid(a.id)}')">Hapus</button>
   </div>`;
 }
 

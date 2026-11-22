@@ -50,6 +50,26 @@ function safeUrl(u) {
     return (url.protocol === 'https:' || url.protocol === 'http:') ? url.href : '';
   } catch { return ''; }
 }
+// Keamanan: bersihkan ID sebelum dipakai di dalam atribut handler inline (hanya huruf, angka, _ dan -).
+const sid = v => String(v ?? '').replace(/[^A-Za-z0-9_-]/g, '');
+// Kepemilikan tugas: pakai UID bila ada, nama hanya untuk tugas lama.
+const mineTask = (t, name) => t.assigneeUid ? t.assigneeUid === state.user?.uid : t.assignee === name;
+// Kode undangan: acak kriptografis, 8 karakter (kode lama 6 karakter tetap diterima saat gabung).
+const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const CODE_RE = /^[A-Z0-9]{6,8}$/;
+function randomCode(n = 8) {
+  const a = new Uint32Array(n); crypto.getRandomValues(a);
+  return Array.from(a, x => CODE_CHARS[x % CODE_CHARS.length]).join('');
+}
+const codeRef = c => doc(db, 'joinCodes', c);
+const AUTH_MSG = {
+  'auth/invalid-credential': 'Email atau kata sandi salah.', 'auth/wrong-password': 'Email atau kata sandi salah.',
+  'auth/user-not-found': 'Email atau kata sandi salah.', 'auth/invalid-email': 'Format email tidak valid.',
+  'auth/too-many-requests': 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.',
+  'auth/email-already-in-use': 'Email ini sudah terdaftar. Coba masuk atau atur ulang kata sandi.',
+  'auth/weak-password': 'Kata sandi terlalu lemah.', 'auth/network-request-failed': 'Koneksi bermasalah. Periksa internet Anda.'
+};
+const authMessage = err => AUTH_MSG[err?.code] || 'Terjadi kesalahan. Coba lagi.';
 function localDate(d = new Date()) {
   const p = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
@@ -66,7 +86,7 @@ function dueLabel(t) {
 }
 const needsAction = (t, role, name) => role === 'mentor'
   ? t.status === 'review'
-  : t.assignee === name && (t.status === 'todo' || (t.status === 'progress' && t.revisionNotes));
+  : mineTask(t, name) && (t.status === 'todo' || (t.status === 'progress' && t.revisionNotes));
 function statusInfo(t) {
   if (t.status === 'done') return ['Selesai', 's-done'];
   if (t.status === 'review') return ['Siap Dicek', 's-check'];
@@ -114,7 +134,7 @@ function openDialog(o) {
     const inp = $('appDialogInput');
     inp.value = o.value || ''; inp.placeholder = o.placeholder || '';
     inp.classList.toggle('code-field', !!o.code);
-    inp.maxLength = o.code ? 6 : 500;
+    inp.maxLength = o.code ? 8 : 500;
     $('appDialogError').classList.add('hidden');
     $('appDialogCancel').classList.toggle('hidden', !!o.alertOnly);
     const ok = $('appDialogConfirm');
@@ -340,7 +360,7 @@ async function handleLogin(e) {
   try {
     await setPersistence(auth, $('rememberMe').checked ? browserLocalPersistence : browserSessionPersistence);
     await signInWithEmailAndPassword(auth, email, password);
-  } catch (err) { await showAlert('Gagal masuk: ' + (err.code || err.message), 'Tidak bisa masuk'); }
+  } catch (err) { await showAlert(authMessage(err), 'Tidak bisa masuk'); }
   finally { btn.disabled = false; btn.textContent = 'Masuk ke ruang kerja'; }
 }
 async function handleRegister(e) {
@@ -349,12 +369,13 @@ async function handleRegister(e) {
   const email = $('registerEmail').value.trim();
   const password = $('registerPassword').value;
   const btn = $('registerBtn');
+  if (password.length < 10) return showAlert('Kata sandi minimal 10 karakter.', 'Kata sandi terlalu pendek');
   btn.disabled = true; btn.textContent = 'Mendaftar…';
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName: name });
     await setDoc(doc(db, 'users', cred.user.uid), { email, displayName: name, workspaceIds: [], createdAt: serverTimestamp() });
-  } catch (err) { await showAlert('Gagal daftar: ' + (err.code || err.message), 'Tidak bisa mendaftar'); }
+  } catch (err) { await showAlert(authMessage(err), 'Tidak bisa mendaftar'); }
   finally { btn.disabled = false; btn.textContent = 'Buat akun'; }
 }
 async function handleLogout() {
@@ -366,7 +387,7 @@ async function handleLogout() {
 
 // Data dashboard
 function summarizeTasks(tasks, role, myName) {
-  const mine = role === 'worker' ? tasks.filter(t => t.assignee === myName) : tasks;
+  const mine = role === 'worker' ? tasks.filter(t => mineTask(t, myName)) : tasks;
   const c = { todo: 0, progress: 0, review: 0, done: 0, overdue: 0 };
   mine.forEach(t => {
     c[t.status] = (c[t.status] || 0) + 1;
@@ -434,7 +455,7 @@ function renderWorkspaceList(workspaces) {
       </div>
       <div class="ws-card-foot">
         <span class="ws-code-label">KODE ${escapeHtml(code || '-')}</span>
-        <button type="button" class="btn-sm btn-ghost ws-card-open" aria-label="Buka ruang ${escapeHtml(ws.name)}" onclick="openWorkspace('${ws.id}')">Buka ruang</button>
+        <button type="button" class="btn-sm btn-ghost ws-card-open" aria-label="Buka ruang ${escapeHtml(ws.name)}" onclick="openWorkspace('${sid(ws.id)}')">Buka ruang</button>
       </div>
     </article>`;
   };
@@ -452,7 +473,7 @@ function renderWorkspaceList(workspaces) {
     const btn = $('inlineJoinBtn');
     if (btn) btn.onclick = () => {
       const code = ($('inlineJoinCode')?.value || '').trim().toUpperCase();
-      if (code.length === 6) { $('joinCodeInput').value = code; $('joinWorkspaceModal').classList.remove('hidden'); }
+      if (CODE_RE.test(code)) { $('joinCodeInput').value = code; $('joinWorkspaceModal').classList.remove('hidden'); }
       else toast('Kode harus 6 karakter', 'info');
     };
   }
@@ -463,7 +484,7 @@ function renderWorkspaceList(workspaces) {
           const total = s.total || 0;
           const done = s.c?.done || 0;
           const progress = total ? Math.round((done / total) * 100) : 0;
-          return `<button type="button" class="ws-card-item ws-preview" onclick="openWorkspace('${ws.id}')">
+          return `<button type="button" class="ws-card-item ws-preview" onclick="openWorkspace('${sid(ws.id)}')">
             <span class="ws-card-name">${escapeHtml(ws.name)}</span>
             <span class="ws-progress-bar"><span class="ws-progress-fill" style="width:${progress}%"></span></span>
             <span class="ws-progress-text">${progress}% · ${s.action || 0} menunggu</span>
@@ -486,7 +507,7 @@ function renderMiniCalendar() {
   const items = [];
   dashboardWorkspaces.forEach(ws => (ws.tasks || []).forEach(t => {
     if (t.status === 'done' || !t.endDate) return;
-    if (ws.role !== 'mentor' && t.assignee !== ws.workerName) return;
+    if (ws.role !== 'mentor' && !mineTask(t, ws.workerName)) return;
     const d = new Date(t.endDate + 'T00:00:00');
     if (d >= new Date(localDate() + 'T00:00:00') && d <= end) items.push({ t, ws, date: d });
   }));
@@ -495,7 +516,7 @@ function renderMiniCalendar() {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   el.innerHTML = items.slice(0, 8).map(({ t, ws, date }) => {
     const lv = dueLevel(t);
-    return `<button type="button" class="mini-cal-item ${lv ? 'due-' + lv : ''}" onclick="openWorkspace('${ws.id}')">
+    return `<button type="button" class="mini-cal-item ${lv ? 'due-' + lv : ''}" onclick="openWorkspace('${sid(ws.id)}')">
       <span class="mini-cal-date"><span class="day">${date.getDate()}</span><span class="mon">${months[date.getMonth()]}</span></span>
       <span class="mini-cal-info"><strong>${escapeHtml(t.title)}</strong><small>${escapeHtml(ws.name)} · ${escapeHtml(t.assignee)}</small></span>
       ${lv ? `<span class="due-badge due-${lv}">${dueLabel(t)}</span>` : ''}
@@ -530,7 +551,7 @@ function renderDashboardTaskList() {
   const el = $('dashboardTaskList'); if (!el) return;
   const items = [];
   dashboardWorkspaces.forEach(ws => (ws.tasks || []).forEach(t => {
-    if (ws.role === 'worker' && t.assignee !== ws.workerName) return;
+    if (ws.role === 'worker' && !mineTask(t, ws.workerName)) return;
     items.push({ ...t, workspaceName: ws.name, workspaceId: ws.id });
   }));
   items.sort((a, b) => String(a.endDate || '9999').localeCompare(String(b.endDate || '9999')));
@@ -543,7 +564,7 @@ function renderDashboardTaskList() {
     const [label, cls] = statusInfo(t);
     const due = !t.endDate ? '-' : t.status === 'done' ? t.endDate : dueLabel(t);
     const dueCls = dueLevel(t);
-    return `<button type="button" class="dash-task-row" onclick="openWorkspace('${t.workspaceId}')">
+    return `<button type="button" class="dash-task-row" onclick="openWorkspace('${sid(t.workspaceId)}')">
       <span class="dash-task-info">
         <span class="dash-task-title">${escapeHtml(t.title)}</span>
         <span class="dash-task-meta">${escapeHtml(t.workspaceName)}${t.assignee ? ', ' + escapeHtml(t.assignee) : ''}</span>
@@ -560,20 +581,21 @@ function renderDashboardTaskList() {
 async function handleCreateWorkspace(e) {
   e.preventDefault();
   const name = $('newWorkspaceName').value.trim();
-  const codeInput = ($('newWorkspaceCode')?.value || '').trim().toUpperCase();
+  const typed = ($('newWorkspaceCode')?.value || '').trim().toUpperCase();
   const drive = ($('newWorkspaceDrive')?.value || '').trim();
-  if (!name || codeInput.length !== 6) return showAlert('Nama dan kode 6 karakter wajib diisi.');
+  if (!name) return showAlert('Nama ruang kerja wajib diisi.');
+  if (typed && !/^[A-Z0-9]{8}$/.test(typed)) return showAlert('Kode undangan harus tepat 8 huruf/angka, atau kosongkan untuk kode acak.');
+  const code = typed || randomCode();
   const btn = $('createWorkspaceSubmitBtn');
   btn.disabled = true; btn.textContent = 'Membuat…';
   try {
-    if (!(await getDocs(query(collection(db, 'workspaces'), where('joinCode', '==', codeInput), limit(1)))).empty) {
-      return showAlert('Kode undangan sudah digunakan. Pilih kode lain.');
-    }
+    if ((await getDoc(codeRef(code))).exists()) return showAlert('Kode undangan sudah digunakan. Pilih kode lain.');
     const uid = state.user.uid;
     const mentorName = state.user.displayName || 'Lead';
     const wsRef = doc(collection(db, 'workspaces'));
     const batch = writeBatch(db);
-    batch.set(wsRef, { name, ownerUid: uid, joinCode: codeInput, driveLink: drive ? safeUrl(drive) : '', createdAt: serverTimestamp() });
+    batch.set(wsRef, { name, ownerUid: uid, joinCode: code, driveLink: drive ? safeUrl(drive) : '', createdAt: serverTimestamp() });
+    batch.set(codeRef(code), { workspaceId: wsRef.id, name, ownerUid: uid });
     batch.set(doc(db, 'workspaces', wsRef.id, 'members', uid), { uid, email: state.user.email, name: mentorName, role: 'mentor', division: 'Manajemen', joinedAt: serverTimestamp(), lastActive: serverTimestamp() });
     batch.set(doc(db, 'users', uid), { workspaceIds: arrayUnion(wsRef.id) }, { merge: true });
     await batch.commit();
@@ -581,42 +603,75 @@ async function handleCreateWorkspace(e) {
     $('createWorkspaceModal').classList.add('hidden');
     $('createWorkspaceForm').reset();
     showWorkspaceView(); subscribeToWorkspace();
+    toast(`Kode undangan: ${code}`, 'success');
   } catch (err) { await showAlert('Gagal membuat ruang kerja: ' + err.message); }
   finally { btn.disabled = false; btn.textContent = 'Buat ruang kerja'; }
+}
+// Pastikan nama Anda unik di ruang kerja; bila kembar, beri akhiran pendek.
+async function ensureUniqueName(wsId) {
+  try {
+    const snap = await getDocs(collection(db, 'workspaces', wsId, 'members'));
+    if (snap.docs.some(d => d.id !== state.user.uid && d.data().name === state.workerName)) {
+      const unique = `${state.workerName} (${state.user.uid.slice(0, 4)})`;
+      await updateDoc(doc(db, 'workspaces', wsId, 'members', state.user.uid), { name: unique });
+      state.workerName = unique;
+    }
+  } catch (err) { console.warn('Pengecekan nama unik dilewati:', err.code || err.message); }
+}
+// Migrasi otomatis saat mentor membuka ruang kerja lama: buat dokumen kode undangan dan isi assigneeUid.
+async function migrateWorkspace(wsId, ws) {
+  try {
+    const code = String(ws.joinCode || '').toUpperCase();
+    if (CODE_RE.test(code) && !(await getDoc(codeRef(code))).exists()) {
+      await setDoc(codeRef(code), { workspaceId: wsId, name: ws.name || '', ownerUid: ws.ownerUid || state.user.uid });
+    }
+    const [tasks, members] = await Promise.all([
+      getDocs(collection(db, 'workspaces', wsId, 'tasks')), getDocs(collection(db, 'workspaces', wsId, 'members'))
+    ]);
+    const byName = new Map();
+    members.forEach(m => { const n = m.data().name; byName.set(n, [...(byName.get(n) || []), m.id]); });
+    const batch = writeBatch(db); let n = 0;
+    tasks.forEach(t => {
+      const d = t.data(); if (d.assigneeUid || !d.assignee || n >= 400) return;
+      const ids = byName.get(d.assignee);
+      if (ids?.length === 1) { batch.update(t.ref, { assigneeUid: ids[0] }); n++; }
+    });
+    if (n) await batch.commit();
+  } catch (err) { console.warn('Migrasi ruang kerja dilewati:', err.code || err.message); }
 }
 async function handleJoinWorkspace(e) {
   e.preventDefault();
   const code = $('joinCodeInput').value.trim().toUpperCase();
-  if (code.length !== 6) return showAlert('Kode harus 6 karakter.');
+  if (!CODE_RE.test(code)) return showAlert('Kode undangan tidak valid.');
   const btn = $('joinWorkspaceSubmitBtn');
   btn.disabled = true; btn.textContent = 'Mencari…';
   try {
-    const snap = await getDocs(query(collection(db, 'workspaces'), where('joinCode', '==', code), limit(1)));
-    if (snap.empty) return showAlert('Kode undangan tidak valid.');
-    const wsDoc = snap.docs[0], wsData = wsDoc.data(), uid = state.user.uid;
-    const myMemberRef = doc(db, 'workspaces', wsDoc.id, 'members', uid);
+    const codeSnap = await getDoc(codeRef(code));
+    if (!codeSnap.exists()) return showAlert('Kode undangan tidak valid.');
+    const { workspaceId: wsId, name: wsName } = codeSnap.data(), uid = state.user.uid;
+    const myMemberRef = doc(db, 'workspaces', wsId, 'members', uid);
     const existingMe = await getDoc(myMemberRef);
     const myName = state.user.displayName || state.user.email.split('@')[0];
     let justJoined = false;
     if (existingMe.exists()) {
-      await setDoc(doc(db, 'users', uid), { workspaceIds: arrayUnion(wsDoc.id) }, { merge: true });
+      await setDoc(doc(db, 'users', uid), { workspaceIds: arrayUnion(wsId) }, { merge: true });
       state.role = existingMe.data().role || 'worker';
       state.workerName = existingMe.data().name || myName;
     } else {
-      const membersSnap = await getDocs(collection(db, 'workspaces', wsDoc.id, 'members'));
-      if (membersSnap.docs.filter(d => d.data().role === 'worker').length >= 20) return showAlert('Ruang kerja penuh (20 anggota).');
+      // Batas 20 anggota harus ditegakkan di server (Cloud Function); klien tidak bisa membaca daftar anggota sebelum bergabung.
       const batch = writeBatch(db);
-      batch.set(myMemberRef, { uid, email: state.user.email, name: myName, role: 'worker', division: 'Umum', joinedAt: serverTimestamp(), lastActive: serverTimestamp() });
-      batch.set(doc(db, 'users', uid), { workspaceIds: arrayUnion(wsDoc.id) }, { merge: true });
+      batch.set(myMemberRef, { uid, email: state.user.email, name: myName, role: 'worker', division: 'Umum', joinCode: code, joinedAt: serverTimestamp(), lastActive: serverTimestamp() });
+      batch.set(doc(db, 'users', uid), { workspaceIds: arrayUnion(wsId) }, { merge: true });
       await batch.commit();
       state.role = 'worker'; state.workerName = myName; justJoined = true;
+      await ensureUniqueName(wsId);
     }
-    state.workspaceId = wsDoc.id; state.workspaceName = wsData.name;
+    state.workspaceId = wsId; state.workspaceName = wsName;
     if (justJoined) logActivity('join', `${state.workerName} bergabung ke ruang kerja`);
     $('joinWorkspaceModal').classList.add('hidden');
     $('joinWorkspaceForm').reset();
     showWorkspaceView(); subscribeToWorkspace();
-  } catch (err) { await showAlert('Gagal bergabung: ' + err.message); }
+  } catch (err) { await showAlert('Gagal bergabung: ' + (err.code === 'permission-denied' ? 'Kode tidak valid atau akses ditolak.' : err.message)); }
   finally { btn.disabled = false; btn.textContent = 'Gabung ruang kerja'; }
 }
 window.openWorkspace = async (workspaceId) => {
@@ -630,6 +685,7 @@ window.openWorkspace = async (workspaceId) => {
     state.role = memberSnap.data().role;
     state.workerName = memberSnap.data().name || state.user.displayName || 'User';
     showWorkspaceView(); subscribeToWorkspace();
+    if (state.role === 'mentor') migrateWorkspace(workspaceId, wsSnap.data());
   } catch (err) { await showAlert('Gagal membuka ruang kerja: ' + err.message); }
 };
 function backToDashboard() {
@@ -746,7 +802,7 @@ const subProgress = t => {
 const progressBar = p => `<div class="progress-row"><div class="progress-track"><div class="progress-fill ${p.pct === 100 ? 'full' : ''}" style="width:${p.pct}%"></div></div><span>${p.pct}%</span></div>`;
 function renderTasks() {
   const tbody = $('taskTableBody'); if (!tbody) return;
-  let list = state.role === 'worker' ? state.tasks.filter(t => t.assignee === state.workerName) : [...state.tasks];
+  let list = state.role === 'worker' ? state.tasks.filter(t => mineTask(t, state.workerName)) : [...state.tasks];
   renderDeadlineBanner(list);
   list = applyTaskFilters(list);
   if (!list.length) { tbody.innerHTML = '<tr><td colspan="6" class="table-empty">Belum ada tugas dalam daftar.</td></tr>'; return; }
@@ -756,7 +812,7 @@ function renderTasks() {
     const [statusText, statusClass] = statusInfo(task);
     const shortDesc = task.desc ? (task.desc.length > 60 ? task.desc.slice(0, 60) + '…' : task.desc) : '-';
     const diff = (task.difficulty || 'sedang').toLowerCase();
-    return `<tr class="${lv ? 'row-due-' + lv : ''}" onclick="openTaskDetailModal('${task.id}')">
+    return `<tr class="${lv ? 'row-due-' + lv : ''}" onclick="openTaskDetailModal('${sid(task.id)}')">
       <td data-label="Tugas"><div><button type="button" class="row-link">${escapeHtml(task.title)}</button>${(task.attachments || []).length ? `<span class="clip-count" title="Lampiran">Lampiran ${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td>
       <td data-label="Instruksi" class="task-desc-cell"><div class="task-desc" title="${escapeHtml(task.desc || '')}">${escapeHtml(shortDesc)}</div></td>
       <td data-label="Anggota" class="cell-sub">${escapeHtml(task.assignee)}</td>
@@ -781,7 +837,7 @@ const taskRef = id => doc(db, 'workspaces', state.workspaceId, 'tasks', id);
 function renderTaskDrive(task) {
   $('detailTaskDrive').innerHTML = driveLinksHtml(resolveTaskDrive(task, state.driveLink, safeUrl), escapeHtml);
   const box = $('detailDriveEdit'), input = $('detailDriveInput');
-  const canEdit = canEditTaskDrive(task, state.role, state.workerName);
+  const canEdit = canEditTaskDrive(task, state.role, state.workerName, state.user.uid);
   box.classList.toggle('hidden', !canEdit);
   if (canEdit && document.activeElement !== input) input.value = task.driveUrl || '';
 }
@@ -809,10 +865,10 @@ window.openTaskDetailModal = (taskId) => {
   const history = task.history || [];
   const label = { laporan: 'Laporan', revisi: 'Revisi', selesai: 'Divalidasi' };
   $('detailHistoryList').innerHTML = history.length
-    ? [...history].sort((a, b) => b.at - a.at).map(h => `<div class="hist-item hist-${escapeHtml(h.type)}"><div class="hist-head"><strong>${label[h.type] || h.type}</strong> · ${escapeHtml(h.by || '')} <span>${new Date(h.at).toLocaleString('id-ID')}</span></div>${h.text ? `<div style="margin-top:4px">${escapeHtml(h.text)}</div>` : ''}</div>`).join('')
+    ? [...history].sort((a, b) => b.at - a.at).map(h => `<div class="hist-item hist-${escapeHtml(h.type)}"><div class="hist-head"><strong>${escapeHtml(label[h.type] || h.type)}</strong> · ${escapeHtml(h.by || '')} <span>${new Date(h.at).toLocaleString('id-ID')}</span></div>${h.text ? `<div style="margin-top:4px">${escapeHtml(h.text)}</div>` : ''}</div>`).join('')
     : '<p class="empty-hint">Belum ada riwayat.</p>';
 
-  const isWorker = state.role === 'worker' && task.assignee === state.workerName;
+  const isWorker = state.role === 'worker' && mineTask(task, state.workerName);
   const isLead = state.role === 'mentor';
   if (isWorker && task.status === 'todo' && !autoStarted.has(task.id)) {
     autoStarted.add(task.id);
@@ -834,7 +890,7 @@ window.openTaskDetailModal = (taskId) => {
   } else if (isLead && task.status === 'review') {
     ac.innerHTML = '<div class="action-group"><button class="btn-sm btn-warning" onclick="submitReview(true)">Revisi</button><button class="btn-sm btn-success" onclick="submitReview(false)">Selesai</button></div>';
   } else if (isLead) {
-    ac.innerHTML = `<div class="action-group"><button class="btn-sm btn-ghost" onclick="openEditTaskModal('${task.id}')">Edit</button><button class="btn-sm btn-warning" onclick="deleteTask('${task.id}')">Hapus</button></div>`;
+    ac.innerHTML = `<div class="action-group"><button class="btn-sm btn-ghost" onclick="openEditTaskModal('${sid(task.id)}')">Edit</button><button class="btn-sm btn-warning" onclick="deleteTask('${sid(task.id)}')">Hapus</button></div>`;
   } else ac.innerHTML = '';
 
   currentDetailId = task.id;
@@ -845,7 +901,7 @@ window.closeTaskDetailModal = () => { $('taskDetailModal').classList.add('hidden
 
 window.submitReport = async () => {
   const t = state.tasks.find(x => x.id === currentDetailId);
-  if (!t || !(state.role === 'worker' && t.assignee === state.workerName)) return;
+  if (!t || !(state.role === 'worker' && mineTask(t, state.workerName))) return;
   const link = safeUrl($('reportLink').value), notes = $('reportNotes').value.trim(), err = $('reportError');
   if (!link) { err.textContent = 'Tautan wajib diisi dan harus diawali http:// atau https://'; return err.classList.remove('hidden'); }
   err.classList.add('hidden');
@@ -873,7 +929,7 @@ window.submitReview = async (isRevision) => {
       ? { status: 'progress', revisionNotes: notes, history: entry, updatedAt: serverTimestamp() }
       : { status: 'done', revisionNotes: '', history: entry, updatedAt: serverTimestamp() });
     logActivity(isRevision ? 'revision' : 'done', `${state.workerName} ${isRevision ? 'meminta revisi' : 'menyelesaikan'} "${t.title}"`, t.id);
-    notify([memberUid(t.assignee)], { kind: isRevision ? 'revision' : 'done', title: isRevision ? 'Tugas perlu revisi' : 'Tugas dinyatakan selesai', body: t.title, taskId: t.id });
+    notify([t.assigneeUid || memberUid(t.assignee)], { kind: isRevision ? 'revision' : 'done', title: isRevision ? 'Tugas perlu revisi' : 'Tugas dinyatakan selesai', body: t.title, taskId: t.id });
     toast(isRevision ? 'Catatan revisi dikirim' : 'Tugas divalidasi selesai', 'success');
     window.closeTaskDetailModal();
   } catch (e) { err.textContent = 'Gagal: ' + e.message; err.classList.remove('hidden'); }
@@ -917,7 +973,7 @@ function renderDivisionManagement() {
   if (c) {
     c.innerHTML = state.divisions.length ? state.divisions.map(d => {
       const n = state.members.filter(m => m.division === d.name).length;
-      return `<div class="div-row"><div><h3>${escapeHtml(d.name)}</h3><p>${escapeHtml(d.desc || 'Tidak ada deskripsi.')}</p></div><div class="div-row-side"><span class="div-count">${n} anggota</span><button class="btn-sm btn-warning" onclick="deleteDivision('${d.id}')">Hapus</button></div></div>`;
+      return `<div class="div-row"><div><h3>${escapeHtml(d.name)}</h3><p>${escapeHtml(d.desc || 'Tidak ada deskripsi.')}</p></div><div class="div-row-side"><span class="div-count">${n} anggota</span><button class="btn-sm btn-warning" onclick="deleteDivision('${sid(d.id)}')">Hapus</button></div></div>`;
     }).join('') : '<p class="empty-hint">Belum ada divisi terdaftar.</p>';
   }
   const p = $('memberPresenceList');
@@ -927,9 +983,9 @@ function renderDivisionManagement() {
     tb.innerHTML = state.members.map(m => `<tr>
       <td data-label="Nama"><strong>${escapeHtml(m.name)}</strong></td>
       <td data-label="Email" class="cell-sub">${escapeHtml(m.email)}</td>
-      <td data-label="Peran" class="col-center"><span class="role-badge ${m.role}">${m.role === 'mentor' ? 'Lead' : 'Member'}</span></td>
+      <td data-label="Peran" class="col-center"><span class="role-badge ${m.role === 'mentor' ? 'mentor' : 'worker'}">${m.role === 'mentor' ? 'Lead' : 'Member'}</span></td>
       <td data-label="Divisi" class="col-divisi">${escapeHtml(m.division || 'Umum')}</td>
-      <td data-label="Aksi" class="col-center"><div><button class="btn-sm" onclick="openEditMemberModal('${m.id}')">Edit</button>${m.id !== state.user.uid ? `<button class="btn-sm btn-warning" onclick="removeMember('${m.id}')">Keluarkan</button>` : ''}</div></td>
+      <td data-label="Aksi" class="col-center"><div><button class="btn-sm" onclick="openEditMemberModal('${sid(m.id)}')">Edit</button>${m.id !== state.user.uid ? `<button class="btn-sm btn-warning" onclick="removeMember('${sid(m.id)}')">Keluarkan</button>` : ''}</div></td>
     </tr>`).join('');
   }
 }
@@ -943,7 +999,7 @@ function renderMembersGrid(members) {
       <div class="team-avatar">${escapeHtml(initials)}<span class="presence-dot ${online ? 'online' : ''}"></span></div>
       <div class="team-info">
         <div class="name-row"><button type="button" class="name name-btn" data-profile-uid="${escapeHtml(m.id)}" title="Lihat profil ${escapeHtml(m.name)}">${escapeHtml(m.name)}</button></div>
-        <div class="meta"><span class="role-badge ${m.role}" style="font-size:.6rem;padding:1px 6px">${m.role === 'mentor' ? 'Lead' : 'Member'}</span> · ${escapeHtml(m.division || 'Umum')}</div>
+        <div class="meta"><span class="role-badge ${m.role === 'mentor' ? 'mentor' : 'worker'}" style="font-size:.6rem;padding:1px 6px">${m.role === 'mentor' ? 'Lead' : 'Member'}</span> · ${escapeHtml(m.division || 'Umum')}</div>
         <div class="meta last-active">${online ? 'Aktif sekarang' : 'Terakhir aktif: ' + timeAgo(m.lastActive)}</div>
       </div>
     </div>`;
@@ -990,16 +1046,21 @@ async function leaveWorkspace() {
 async function changeJoinCode() {
   const input = await askText({
     title: 'Ganti kode undangan',
-    message: 'Masukkan 6 huruf/angka, atau kosongkan untuk membuat kode acak.',
-    label: 'Kode undangan baru', placeholder: 'ABC123', code: true, confirmText: 'Ganti kode',
-    validate: v => (!v.trim() || /^[A-Za-z0-9]{6}$/.test(v.trim())) ? '' : 'Kode harus tepat 6 huruf/angka.'
+    message: 'Masukkan tepat 8 huruf/angka, atau kosongkan untuk membuat kode acak (disarankan).',
+    label: 'Kode undangan baru', placeholder: 'Kosongkan = acak', code: true, confirmText: 'Ganti kode',
+    validate: v => (!v.trim() || /^[A-Za-z0-9]{8}$/.test(v.trim())) ? '' : 'Kode harus tepat 8 huruf/angka.'
   });
   if (input === null) return;
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const code = (input.trim() || Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')).toUpperCase();
+  const code = (input.trim() || randomCode()).toUpperCase();
   try {
-    if (!(await getDocs(query(collection(db, 'workspaces'), where('joinCode', '==', code), limit(1)))).empty) return showAlert('Kode sudah dipakai ruang lain.');
-    await updateDoc(doc(db, 'workspaces', state.workspaceId), { joinCode: code });
+    const wsRef = doc(db, 'workspaces', state.workspaceId);
+    if ((await getDoc(codeRef(code))).exists()) return showAlert('Kode sudah dipakai ruang lain.');
+    const old = String((await getDoc(wsRef)).data()?.joinCode || '').toUpperCase();
+    const batch = writeBatch(db);
+    batch.update(wsRef, { joinCode: code });
+    batch.set(codeRef(code), { workspaceId: state.workspaceId, name: state.workspaceName, ownerUid: (await getDoc(wsRef)).data()?.ownerUid || state.user.uid });
+    if (CODE_RE.test(old)) batch.delete(codeRef(old));
+    await batch.commit();
     await showAlert(`Kode undangan baru: ${code}`, 'Kode diganti');
   } catch (err) { await showAlert('Gagal: ' + err.message); }
 }
@@ -1013,9 +1074,11 @@ async function deleteWorkspace() {
   if (typed === null) return;
   try {
     const refs = [];
-    for (const sub of ['tasks', 'divisions', 'members', 'activities', 'announcements']) {
+    for (const sub of ['tasks', 'divisions', 'activities', 'announcements', 'members']) {
       (await getDocs(collection(db, 'workspaces', state.workspaceId, sub))).forEach(d => refs.push(d.ref));
     }
+    const delWs = (await getDoc(doc(db, 'workspaces', state.workspaceId))).data() || {};
+    if (CODE_RE.test(String(delWs.joinCode || '').toUpperCase())) refs.unshift(codeRef(String(delWs.joinCode).toUpperCase()));
     refs.push(doc(db, 'workspaces', state.workspaceId));
     unsubscribers.forEach(u => u()); unsubscribers = [];
     for (let i = 0; i < refs.length; i += 400) {
@@ -1029,17 +1092,34 @@ async function deleteWorkspace() {
   } catch (err) { await showAlert('Gagal: ' + err.message); }
 }
 async function renameUser(newName, oldName) {
-  await updateProfile(auth.currentUser, { displayName: newName });
   const snap = await getDoc(doc(db, 'users', state.user.uid));
   const ids = snap.exists() ? (snap.data().workspaceIds || []) : [];
+  // Nama harus unik di tiap ruang kerja yang Anda ikuti.
+  for (const id of ids) {
+    let members;
+    try { members = await getDocs(collection(db, 'workspaces', id, 'members')); } catch { continue; }
+    if (members.docs.some(d => d.id !== state.user.uid && d.data().name === newName)) {
+      throw new Error(`Nama "${newName}" sudah dipakai anggota lain di salah satu ruang kerja Anda.`);
+    }
+  }
+  await updateProfile(auth.currentUser, { displayName: newName });
   await setDoc(doc(db, 'users', state.user.uid), { displayName: newName }, { merge: true });
   for (const id of ids) {
     const mRef = doc(db, 'workspaces', id, 'members', state.user.uid);
     if (!(await getDoc(mRef)).exists()) continue;
-    const tasks = await getDocs(query(collection(db, 'workspaces', id, 'tasks'), where('assignee', '==', oldName)));
-    const batch = writeBatch(db);
+    const tasksCol = collection(db, 'workspaces', id, 'tasks');
+    const [byUid, legacy] = await Promise.all([
+      getDocs(query(tasksCol, where('assigneeUid', '==', state.user.uid))),
+      getDocs(query(tasksCol, where('assignee', '==', oldName)))
+    ]);
+    const batch = writeBatch(db), seen = new Set();
     batch.update(mRef, { name: newName });
-    tasks.forEach(t => batch.update(t.ref, { assignee: newName }));
+    [...byUid.docs, ...legacy.docs].forEach(t => {
+      if (seen.has(t.id)) return; seen.add(t.id);
+      const d = t.data();
+      if (d.assigneeUid && d.assigneeUid !== state.user.uid) return; // jangan sentuh tugas orang lain
+      batch.update(t.ref, { assignee: newName, assigneeUid: state.user.uid });
+    });
     await batch.commit();
   }
   state.user = auth.currentUser;
@@ -1082,7 +1162,7 @@ const markAllRead = () => notifs.markAll();
 
 // Sub-tugas dan lampiran
 const parseSubtasks = text => text.split('\n').map(x => x.trim()).filter(Boolean).slice(0, 30).map(x => ({ id: newId(), text: x.slice(0, 120), done: false }));
-const canEditTask = t => state.role === 'mentor' || (state.role === 'worker' && t.assignee === state.workerName);
+const canEditTask = t => state.role === 'mentor' || (state.role === 'worker' && mineTask(t, state.workerName));
 window.toggleSubtask = async (taskId, subId, checked) => {
   const t = state.tasks.find(x => x.id === taskId); if (!t || !canEditTask(t)) return;
   const before = subProgress(t);
@@ -1116,13 +1196,13 @@ function renderTaskExtras(task) {
   $('detailProgressText').textContent = p ? `${p.done}/${p.total} · ${p.pct}%` : '0%';
   $('detailSubtaskAdd').classList.toggle('hidden', !isLead);
   $('detailSubtaskList').innerHTML = subs.length
-    ? subs.map(s => `<label class="subtask-item ${s.done ? 'done' : ''}"><input type="checkbox" ${s.done ? 'checked' : ''} ${canEdit ? '' : 'disabled'} onchange="toggleSubtask('${task.id}','${s.id}',this.checked)" /><span>${escapeHtml(s.text)}</span>${isLead ? `<button type="button" class="icon-del" aria-label="Hapus sub-tugas" onclick="event.preventDefault();deleteSubtask('${task.id}','${s.id}')"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>` : ''}</label>`).join('')
+    ? subs.map(s => `<label class="subtask-item ${s.done ? 'done' : ''}"><input type="checkbox" ${s.done ? 'checked' : ''} ${canEdit ? '' : 'disabled'} onchange="toggleSubtask('${sid(task.id)}','${sid(s.id)}',this.checked)" /><span>${escapeHtml(s.text)}</span>${isLead ? `<button type="button" class="icon-del" aria-label="Hapus sub-tugas" onclick="event.preventDefault();deleteSubtask('${sid(task.id)}','${sid(s.id)}')"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>` : ''}</label>`).join('')
     : '<p class="empty-hint">Belum ada sub-tugas.</p>';
   const files = task.attachments || [];
   $('attachUploader').classList.toggle('hidden', !canEdit);
   $('detailAttachList').innerHTML = files.length ? files.map(f => {
     const href = safeUrl(f.url), canDel = isLead || f.uid === state.user.uid;
-    return `<div class="attach-item"><div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div>${canDel ? `<button type="button" class="icon-del" aria-label="Hapus lampiran" onclick="deleteAttachment('${task.id}','${f.id}')"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>` : ''}</div>`;
+    return `<div class="attach-item"><div class="attach-meta"><a href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer">${escapeHtml(f.name)}</a><small>${escapeHtml(f.by || '')} · ${fmtTime(f.at)}</small></div>${canDel ? `<button type="button" class="icon-del" aria-label="Hapus lampiran" onclick="deleteAttachment('${sid(task.id)}','${sid(f.id)}')"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>` : ''}</div>`;
   }).join('') : '<p class="empty-hint">Belum ada lampiran.</p>';
 }
 function afterTasksUpdate() {
@@ -1142,7 +1222,7 @@ async function addAttachmentLink() {
     await updateDoc(taskRef(t.id), { attachments: arrayUnion({ id: newId(), name, url, by: state.workerName, uid: state.user.uid, at: Date.now() }), updatedAt: serverTimestamp() });
     $('attachUrl').value = ''; $('attachName').value = '';
     logActivity('file', `${state.workerName} menambahkan lampiran "${name}" pada "${t.title}"`, t.id);
-    notify(state.role === 'mentor' ? [memberUid(t.assignee)] : mentorUids(), { kind: 'file', title: 'Lampiran baru', body: `${name} · ${t.title}`, taskId: t.id });
+    notify(state.role === 'mentor' ? [t.assigneeUid || memberUid(t.assignee)] : mentorUids(), { kind: 'file', title: 'Lampiran baru', body: `${name} · ${t.title}`, taskId: t.id });
   } catch (err) { await showAlert('Gagal: ' + err.message); }
 }
 window.deleteAttachment = async (taskId, fid) => {
@@ -1164,14 +1244,14 @@ function renderCalendar() {
   const y = calMonth.getFullYear(), m = calMonth.getMonth(), today = localDate();
   $('calTitle').textContent = calMonth.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
   const offset = (new Date(y, m, 1).getDay() + 6) % 7, days = new Date(y, m + 1, 0).getDate();
-  const tasks = (state.role === 'worker' ? state.tasks.filter(t => t.assignee === state.workerName) : state.tasks).filter(t => t.endDate);
+  const tasks = (state.role === 'worker' ? state.tasks.filter(t => mineTask(t, state.workerName)) : state.tasks).filter(t => t.endDate);
   const byDay = {}; tasks.forEach(t => (byDay[t.endDate] = byDay[t.endDate] || []).push(t));
   let html = '<div class="cal-cell empty"></div>'.repeat(offset);
   for (let d = 1; d <= days; d++) {
     const key = localDate(new Date(y, m, d)), list = byDay[key] || [], max = key === calExpanded ? 99 : 3;
     html += `<div class="cal-cell ${key === today ? 'today' : ''}"><span class="cal-day">${d}</span>`
-      + list.slice(0, max).map(t => `<button type="button" class="cal-chip ${chipClass(t)}" onclick="openTaskDetailModal('${t.id}')" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</button>`).join('')
-      + (list.length > 3 ? `<button type="button" class="cal-more" onclick="expandCalDay('${key}')">${key === calExpanded ? 'Ringkas' : `+${list.length - 3} lagi`}</button>` : '')
+      + list.slice(0, max).map(t => `<button type="button" class="cal-chip ${chipClass(t)}" onclick="openTaskDetailModal('${sid(t.id)}')" title="${escapeHtml(t.title)}">${escapeHtml(t.title)}</button>`).join('')
+      + (list.length > 3 ? `<button type="button" class="cal-more" onclick="expandCalDay('${sid(key)}')">${key === calExpanded ? 'Ringkas' : `+${list.length - 3} lagi`}</button>` : '')
       + '</div>';
   }
   grid.innerHTML = html;
@@ -1234,7 +1314,7 @@ function setupEventListeners() {
   $('logoutBtn').addEventListener('click', handleLogout);
   $('googleLoginBtn').addEventListener('click', async () => {
     try { await signInWithPopup(auth, new GoogleAuthProvider()); }
-    catch (err) { if (err.code !== 'auth/popup-closed-by-user') await showAlert('Gagal: ' + err.code); }
+    catch (err) { if (err.code !== 'auth/popup-closed-by-user') await showAlert(authMessage(err)); }
   });
   $('forgotPasswordLink').addEventListener('click', async e => {
     e.preventDefault();
@@ -1299,7 +1379,7 @@ function setupEventListeners() {
   $('driveLinkInput')?.addEventListener('input', e => updateDriveStatus(e.target.value));
   $('saveTaskDriveBtn')?.addEventListener('click', async () => {
     const t = state.tasks.find(x => x.id === currentDetailId);
-    if (!t || !canEditTaskDrive(t, state.role, state.workerName)) return;
+    if (!t || !canEditTaskDrive(t, state.role, state.workerName, state.user.uid)) return;
     const raw = $('detailDriveInput').value.trim();
     if (raw && !safeUrl(raw)) return showAlert('Tautan harus diawali http:// atau https://');
     try {
@@ -1343,7 +1423,7 @@ function setupEventListeners() {
       targets.forEach(m => {
         const ref = doc(collection(db, 'workspaces', state.workspaceId, 'tasks')); refs.push(ref);
         batch.set(ref, {
-          title: taskTitle, assignee: m.name, difficulty: $('taskDifficulty').value, startDate, endDate,
+          title: taskTitle, assignee: m.name, assigneeUid: m.id, difficulty: $('taskDifficulty').value, startDate, endDate,
           desc: $('taskDesc').value.trim(), driveSource, driveUrl,
           status: 'todo', reportNotes: '', reportFileLink: '', revisionNotes: '',
           subtasks: parseSubtasks(subText), attachments: [],
@@ -1415,6 +1495,7 @@ function setupEventListeners() {
     const newName = $('accountName').value.trim(), newPw = $('accountPassword').value;
     const oldName = state.user.displayName || state.user.email.split('@')[0];
     try {
+      if (newPw && newPw.length < 10) throw new Error('Kata sandi baru minimal 10 karakter.');
       if (newPw) await updatePassword(auth.currentUser, newPw);
       if (newName && newName !== oldName) await renameUser(newName, oldName);
       $('accountModal').classList.add('hidden');
@@ -1792,16 +1873,16 @@ function renderHabits() {
         if (h.history?.[localDate(d)]) done30++;
       }
       return `
-      <div class="habit-block" data-id="${h.id}">
-        <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${h.id}">
-          <button type="button" class="habit-check" data-toggle="${h.id}" aria-pressed="${h.doneToday}" aria-label="Tandai ${escapeHtml(h.name)} selesai hari ini">${h.doneToday ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : ''}</button>
+      <div class="habit-block" data-id="${escapeHtml(h.id)}">
+        <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${escapeHtml(h.id)}">
+          <button type="button" class="habit-check" data-toggle="${escapeHtml(h.id)}" aria-pressed="${h.doneToday}" aria-label="Tandai ${escapeHtml(h.name)} selesai hari ini">${h.doneToday ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : ''}</button>
           <span class="habit-icon">${escapeHtml(icon)}</span>
           <button type="button" class="habit-name" aria-expanded="${open}">${escapeHtml(h.name)}</button>
           ${progress}
           <span class="habit-days">${h.streak} hari${milestone ? ' <span class="milestone-pill">Milestone ' + milestone + '</span>' : ''}</span>
-          <button type="button" class="habit-edit-btn" data-edit="${h.id}" aria-label="Edit ${escapeHtml(h.name)}">Edit</button>
+          <button type="button" class="habit-edit-btn" data-edit="${escapeHtml(h.id)}" aria-label="Edit ${escapeHtml(h.name)}">Edit</button>
         </div>
-        <div class="habit-detail ${open ? '' : 'hidden'}" data-detail="${h.id}">
+        <div class="habit-detail ${open ? '' : 'hidden'}" data-detail="${escapeHtml(h.id)}">
           <div class="habit-detail-stats">
             <span>${done30}/30 hari · ${Math.round(done30 / 30 * 100)}%</span>
             <span>Streak ${h.streak} · terpanjang ${h.longest}</span>
@@ -1849,7 +1930,7 @@ function renderHabits() {
       }
       recent = filled.concat(recent);
     }
-    graph.innerHTML = recent.map(c => `<div class="contrib-cell lv${c.level || 0}" title="${c.date || ''}"></div>`).join('');
+    graph.innerHTML = recent.map(c => `<div class="contrib-cell lv${c.level || 0}" title="${escapeHtml(c.date || '')}"></div>`).join('');
   }
   renderReminderBanner();
   renderInsight();
@@ -2009,7 +2090,7 @@ function renderMoodJournal() {
     const d = new Date(m.date + 'T12:00:00');
     const label = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
     const tags = (m.tags || []).map(t => `<span class="mood-tag-chip mini">${escapeHtml(t)}</span>`).join('');
-    return `<button type="button" class="mood-journal-item" data-date="${m.date}">
+    return `<button type="button" class="mood-journal-item" data-date="${escapeHtml(m.date)}">
       <span class="mj-emoji">${moodFace(m.mood)}</span>
       <span class="mj-body"><span class="mj-date">${label}</span>
       ${m.note ? `<span class="mj-note">${escapeHtml(m.note)}</span>` : ''}

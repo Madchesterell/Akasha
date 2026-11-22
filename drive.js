@@ -22,9 +22,11 @@ export function driveLinksHtml({ folder, result }, escapeHtml) {
 }
 
 /** Siapa boleh mengubah tautan folder langsung dari detail tugas. */
-export function canEditTaskDrive(task, role, workerName) {
+export function canEditTaskDrive(task, role, workerName, uid) {
   if (!task) return false;
-  if (task.driveSource === 'individual') return role === 'mentor' || (role === 'worker' && task.assignee === workerName);
+  // Pemilik tugas dikenali lewat UID bila ada; nama hanya untuk tugas lama.
+  const owner = task.assigneeUid ? task.assigneeUid === uid : task.assignee === workerName;
+  if (task.driveSource === 'individual') return role === 'mentor' || (role === 'worker' && owner);
   if (task.driveSource === 'task') return role === 'mentor';
   return false;
 }

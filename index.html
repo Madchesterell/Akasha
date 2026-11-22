@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Akasha: Ruang Kerja Tim</title>
 <meta name="description" content="Akasha mengelola tugas, divisi, dan tenggat tim Anda dalam satu ruang kerja." />
+<meta name="referrer" content="strict-origin-when-cross-origin" />
 <meta name="theme-color" content="#E9F0EF" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -74,7 +75,7 @@
         <li>Siap dicek</li>
         <li>Selesai</li>
       </ol>
-      <p class="auth-rules">Satu ruang menampung 20 anggota. Kode undangan terdiri dari 6 karakter.</p>
+      <p class="auth-rules">Satu ruang menampung 20 anggota. Kode undangan terdiri dari 8 karakter.</p>
     </div>
     <svg class="scene" aria-hidden="true" focusable="false"><use href="#scene" width="100%" height="100%"/></svg>
   </section>
@@ -120,7 +121,7 @@
         </div>
         <div class="form-group">
           <label for="registerPassword">Kata sandi</label>
-          <input type="password" id="registerPassword" autocomplete="new-password" placeholder="Minimal 6 karakter" required />
+          <input type="password" id="registerPassword" autocomplete="new-password" minlength="10" placeholder="Minimal 10 karakter" required />
         </div>
         <button type="submit" id="registerBtn" class="btn-primary">Buat akun</button>
         <p class="auth-footer">Sudah punya akun? <a href="#" id="authToggleLink2">Masuk di sini</a></p>
@@ -596,7 +597,7 @@
     <p class="modal-meta">Anda otomatis menjadi mentor di ruang ini.</p>
     <form id="createWorkspaceForm">
       <div class="form-group"><label for="newWorkspaceName">Nama ruang kerja *</label><input type="text" id="newWorkspaceName" class="field" placeholder="Contoh: Tim Produksi 2026" required /></div>
-      <div class="form-group"><label for="newWorkspaceCode">Kode undangan (6 karakter) *</label><input type="text" id="newWorkspaceCode" class="field code-field" maxlength="6" placeholder="ABC123" required /></div>
+      <div class="form-group"><label for="newWorkspaceCode">Kode undangan (8 karakter, kosongkan untuk acak)</label><input type="text" id="newWorkspaceCode" class="field code-field" maxlength="8" placeholder="Kosongkan = acak" autocomplete="off" /></div>
       <div class="form-group"><label for="newWorkspaceDrive">Folder Google Drive</label><input type="url" id="newWorkspaceDrive" class="field" placeholder="https://drive.google.com/… (opsional)" /></div>
       <button type="submit" id="createWorkspaceSubmitBtn" class="btn-primary">Buat ruang kerja</button>
     </form>
@@ -607,9 +608,9 @@
   <div class="modal-content">
     <button class="close-modal" data-close="joinWorkspaceModal" aria-label="Tutup"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg></button>
     <h2 class="modal-title" id="joinWsTitle">Gabung ruang kerja</h2>
-    <p class="modal-meta">Minta kode 6 karakter dari mentor ruang tersebut.</p>
+    <p class="modal-meta">Minta kode undangan dari mentor ruang tersebut.</p>
     <form id="joinWorkspaceForm">
-      <div class="form-group"><label for="joinCodeInput">Kode undangan *</label><input type="text" id="joinCodeInput" class="field code-field" maxlength="6" placeholder="ABC123" required /></div>
+      <div class="form-group"><label for="joinCodeInput">Kode undangan *</label><input type="text" id="joinCodeInput" class="field code-field" maxlength="8" placeholder="Kode undangan" autocomplete="off" required /></div>
       <button type="submit" id="joinWorkspaceSubmitBtn" class="btn-primary">Gabung ruang kerja</button>
     </form>
   </div>
