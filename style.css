@@ -509,11 +509,17 @@ body.theme-playful .card,body.theme-playful .summary-item,body.theme-playful .ws
   .dashboard-layout{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr}
   .sidebar{position:fixed;inset:auto 0 0 0;top:auto;height:auto;grid-row:auto;flex-direction:row;justify-content:space-around;padding:.3rem .4rem calc(.3rem + env(safe-area-inset-bottom));border-right:0;border-top:var(--bw) solid var(--border)}
   .sidebar-brand{display:none}
-  .sidebar-menu{flex-direction:row;flex:1;margin:0;gap:.15rem}
-  .sidebar-footer{margin:0;width:auto;flex:1;max-width:25%}
-  .menu-item{min-height:56px}
+   .sidebar-menu{flex-direction:row;flex:1;margin:0;gap:.15rem;justify-content:space-around}
+  .sidebar-footer{display:none}
+  .menu-item{min-height:56px;flex:1;min-width:0}
   .menu-item.active{box-shadow:none}
   .nav-badge{right:22%}
+  /* Urutan bottom nav mobile: Ruang Kerja, Produktif, Dashboard, Notifikasi, Profil */
+  #myWorkspacesNavBtn{order:1}
+  #productivityNavBtn{order:2}
+  #dashboardNavBtn{order:3}
+  #notificationsNavBtn{order:4}
+  #accountBtn{order:5}
   .dashboard-topbar,.main-content-wrapper{grid-column:1}
   .dashboard-content{padding-bottom:6.5rem}
   .user-info-text{display:none}
