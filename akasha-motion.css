@@ -1,0 +1,106 @@
+/* Akasha motion — entrance per section saat pindah tab.
+   Tidak mengubah layout/warna; hanya opacity/transform sementara. */
+
+:root {
+  --ak-motion-duration: 320ms;
+  --ak-motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ak-motion-distance: 14px;
+}
+
+/* State awal sebelum animasi (diterapkan singkat via JS) */
+.ak-motion-pending {
+  opacity: 0;
+  transform: translateY(var(--ak-motion-distance));
+  will-change: opacity, transform;
+}
+
+.ak-motion-enter {
+  animation: ak-section-in var(--ak-motion-duration) var(--ak-motion-ease) both;
+}
+
+@keyframes ak-section-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--ak-motion-distance));
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Progress bar / fill: isi dari kiri */
+.ak-motion-enter .progress-fill,
+.ak-motion-enter .ws-progress-fill,
+.ak-motion-enter .ring-fg {
+  animation: ak-fill-in 480ms var(--ak-motion-ease) both;
+  transform-origin: left center;
+}
+
+.ak-motion-enter .ring-fg {
+  transform-origin: center;
+  animation-name: ak-ring-in;
+}
+
+@keyframes ak-fill-in {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes ak-ring-in {
+  from { opacity: 0.35; }
+  to { opacity: 1; }
+}
+
+/* Grafik kontribusi / mood: fade lembut */
+.ak-motion-enter .contrib-graph,
+.ak-motion-enter .habit-mini-graph,
+.ak-motion-enter .mood-chart {
+  animation: ak-fade-in 420ms var(--ak-motion-ease) both;
+}
+
+@keyframes ak-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Transisi view utama (auth → dashboard / workspace) */
+.ak-view-enter {
+  animation: ak-view-in 380ms var(--ak-motion-ease) both;
+}
+
+@keyframes ak-view-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Count-up: angka tetap stabil secara layout */
+.ak-count {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ak-motion-duration: 1ms;
+    --ak-motion-distance: 0px;
+  }
+  .ak-motion-pending,
+  .ak-motion-enter,
+  .ak-view-enter,
+  .ak-motion-enter .progress-fill,
+  .ak-motion-enter .ws-progress-fill,
+  .ak-motion-enter .ring-fg,
+  .ak-motion-enter .contrib-graph,
+  .ak-motion-enter .habit-mini-graph,
+  .ak-motion-enter .mood-chart {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
