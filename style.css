@@ -521,7 +521,7 @@ body.theme-playful .card,body.theme-playful .summary-item,body.theme-playful .ws
   #notificationsNavBtn{order:4}
   #accountBtn{order:5}
   .dashboard-topbar,.main-content-wrapper{grid-column:1}
-  .dashboard-content{padding-bottom:6.5rem}
+  .dashboard-content{padding-bottom:5.2rem}
   .user-info-text{display:none}
   .topbar-profile-badge{padding:.25rem}
   .greet-hero{grid-template-columns:minmax(0,1fr);border-radius:var(--r-lg)}
@@ -725,8 +725,8 @@ body.theme-playful .card,body.theme-playful .summary-item,body.theme-playful .ws
   .summary-item{padding:.6rem .5rem;border-radius:var(--r-sm)}
   .summary-item .num{font-size:1.4rem}
   .summary-item .lbl{margin-top:.25rem;font-size:.6875rem;line-height:1.25;overflow-wrap:anywhere}
-  .dash-deadline{margin-bottom:1rem;padding:.8rem}
-  .dash-deadline .section-head{margin-bottom:.5rem}
-  .dash-deadline .subtitle{display:none}
-  .dash-deadline .mini-cal-info small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dash-deadline{margin-bottom:.5rem;padding:.7rem}
+.dash-deadline .section-head{margin-bottom:.4rem}
+.dash-deadline .subtitle{display:none}
+.dash-deadline .mini-cal-info small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
