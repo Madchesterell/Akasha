@@ -703,3 +703,24 @@ body.theme-playful .card,body.theme-playful .summary-item,body.theme-playful .ws
   .route{margin-bottom:.2rem}
   .auth-hero .scene{margin-top:0}
 }
+
+/* ===== Dashboard ringkas: sapaan, 4 statistik sejajar, tenggat mendekat ===== */
+.dash-deadline{margin-bottom:1.25rem}
+.dash-deadline .mini-cal-item{margin-bottom:.35rem;padding:.35rem .6rem;gap:.6rem}
+.dash-deadline .mini-cal-item:last-child{margin-bottom:0}
+.dash-deadline .mini-cal-date{width:2.6rem;padding:.12rem 0}
+.dash-deadline .mini-cal-date .day{font-size:1.1rem}
+.dash-deadline .mini-cal-date .mon{font-size:.6875rem}
+.dash-deadline .mini-cal-info small{font-size:.75rem}
+.mini-cal-more{padding:.35rem .2rem 0;font-size:.8125rem;color:var(--text-2)}
+#notificationsPanel .card + .card{margin-top:1.25rem}
+@media (max-width:760px){
+  .stats-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:.4rem;margin-bottom:.9rem}
+  .summary-item{padding:.6rem .5rem;border-radius:var(--r-sm)}
+  .summary-item .num{font-size:1.4rem}
+  .summary-item .lbl{margin-top:.25rem;font-size:.6875rem;line-height:1.25;overflow-wrap:anywhere}
+  .dash-deadline{margin-bottom:1rem;padding:.8rem}
+  .dash-deadline .section-head{margin-bottom:.5rem}
+  .dash-deadline .subtitle{display:none}
+  .dash-deadline .mini-cal-info small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}

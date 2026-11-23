@@ -285,13 +285,15 @@ function showDashboardView() {
   switchDashboardSection('home');
 }
 function switchDashboardSection(section) {
-  const panels = { home: 'dashboardHomePanel', workspaces: 'myWorkspacesPanel', notifications: 'notificationsPanel', profile: 'profilePanel' };
+  const panels = { home: 'dashboardHomePanel', workspaces: 'myWorkspacesPanel', productivity: 'productivityPanel', notifications: 'notificationsPanel', profile: 'profilePanel' };
   Object.entries(panels).forEach(([k, id]) => $(id)?.classList.toggle('hidden', k !== section));
   $('dashboardNavBtn')?.classList.toggle('active', section === 'home');
   $('myWorkspacesNavBtn')?.classList.toggle('active', section === 'workspaces');
+  $('productivityNavBtn')?.classList.toggle('active', section === 'productivity');
   $('notificationsNavBtn')?.classList.toggle('active', section === 'notifications');
   $('accountBtn')?.classList.toggle('active', section === 'profile');
-  $('dashboardPageTitle').textContent = ({ home: 'Dashboard', workspaces: 'Ruang Kerja Saya', notifications: 'Notifikasi', profile: 'Profil' })[section] || 'Dashboard';
+  $('dashboardPageTitle').textContent = ({ home: 'Dashboard', workspaces: 'Ruang Kerja Saya', productivity: 'Produktivitas', notifications: 'Notifikasi', profile: 'Profil' })[section] || 'Dashboard';
+  if (section === 'productivity') { renderHabits(); renderMoodUI(); renderInsight(); renderReminderBanner(); }
   if (section === 'notifications') renderFullNotifications();
   if (section === 'profile') profile.renderOwn();
 }
@@ -514,14 +516,15 @@ function renderMiniCalendar() {
   items.sort((a, b) => a.date - b.date);
   if (!items.length) { el.innerHTML = '<div class="mini-cal-empty">Tidak ada tenggat dalam 7 hari ke depan.</div>'; return; }
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  el.innerHTML = items.slice(0, 8).map(({ t, ws, date }) => {
+  const MAX = 5;
+  el.innerHTML = items.slice(0, MAX).map(({ t, ws, date }) => {
     const lv = dueLevel(t);
     return `<button type="button" class="mini-cal-item ${lv ? 'due-' + lv : ''}" onclick="openWorkspace('${sid(ws.id)}')">
       <span class="mini-cal-date"><span class="day">${date.getDate()}</span><span class="mon">${months[date.getMonth()]}</span></span>
-      <span class="mini-cal-info"><strong>${escapeHtml(t.title)}</strong><small>${escapeHtml(ws.name)} · ${escapeHtml(t.assignee)}</small></span>
+      <span class="mini-cal-info"><strong>${escapeHtml(t.title)}</strong><small>${escapeHtml(ws.name)}${ws.role === 'mentor' && t.assignee ? ' · ' + escapeHtml(t.assignee) : ''}</small></span>
       ${lv ? `<span class="due-badge due-${lv}">${dueLabel(t)}</span>` : ''}
     </button>`;
-  }).join('');
+  }).join('') + (items.length > MAX ? `<div class="mini-cal-more">+${items.length - MAX} tenggat lainnya</div>` : '');
 }
 function renderDashboardSummary() {
   const el = $('dashboardSummary'); if (!el) return;
@@ -552,12 +555,13 @@ function renderDashboardTaskList() {
   const items = [];
   dashboardWorkspaces.forEach(ws => (ws.tasks || []).forEach(t => {
     if (ws.role === 'worker' && !mineTask(t, ws.workerName)) return;
+    if (t.status === 'done') return;
     items.push({ ...t, workspaceName: ws.name, workspaceId: ws.id });
   }));
   items.sort((a, b) => String(a.endDate || '9999').localeCompare(String(b.endDate || '9999')));
   const top = items.slice(0, 6);
   if (!top.length) {
-    el.innerHTML = '<p class="empty-hint">Belum ada tugas untukmu. Buat ruang kerja atau gabung dengan kode undangan, lalu tugas dari mentor akan muncul di sini.</p>';
+    el.innerHTML = '<p class="empty-hint">Tidak ada tugas yang menunggu. Tugas dari mentor akan muncul di sini.</p>';
     return;
   }
   el.innerHTML = top.map(t => {
@@ -1334,6 +1338,7 @@ function setupEventListeners() {
   });
   $('dashboardNavBtn').addEventListener('click', () => switchDashboardSection('home'));
   $('myWorkspacesNavBtn').addEventListener('click', () => switchDashboardSection('workspaces'));
+  $('productivityNavBtn')?.addEventListener('click', () => switchDashboardSection('productivity'));
   $('notificationsNavBtn').addEventListener('click', () => switchDashboardSection('notifications'));
   $('notificationsNavBtnTop')?.addEventListener('click', () => switchDashboardSection('notifications'));
   document.querySelectorAll('[data-goto]').forEach(b => b.addEventListener('click', () => switchDashboardSection(b.dataset.goto)));

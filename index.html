@@ -136,6 +136,7 @@
     <nav class="sidebar-menu" aria-label="Navigasi utama">
       <button class="menu-item active" id="dashboardNavBtn" title="Dashboard"><svg class="ic" aria-hidden="true"><use href="#i-compass"/></svg><span class="menu-label">Dashboard</span></button>
       <button class="menu-item" id="myWorkspacesNavBtn" title="Ruang kerja saya"><svg class="ic" aria-hidden="true"><use href="#i-boat"/></svg><span class="menu-label">Ruang Kerja</span></button>
+      <button class="menu-item" id="productivityNavBtn" title="Produktivitas" aria-label="Produktivitas"><svg class="ic" aria-hidden="true"><use href="#i-loop"/></svg><span class="menu-label">Produktif</span></button>
       <button class="menu-item" id="notificationsNavBtn" title="Notifikasi" aria-label="Notifikasi"><svg class="ic" aria-hidden="true"><use href="#i-bell"/></svg><span class="menu-label">Notifikasi</span><span class="nav-badge hidden" id="notifBadge"></span></button>
       <button class="menu-item" id="accountBtn" title="Profil saya"><svg class="ic" aria-hidden="true"><use href="#i-person"/></svg><span class="menu-label">Profil</span></button>
     </nav>
@@ -169,25 +170,46 @@
           <div class="greet-ring" id="greetRing" role="img" aria-label="Progres kebiasaan hari ini"></div>
         </section>
 
+        <div class="stats-grid dash-stats" id="dashboardSummary" aria-label="Ringkasan tugas"></div>
+
+        <div class="card dash-deadline" id="deadlineCard">
+          <div class="section-head">
+            <div><h3>Tenggat mendekat</h3><p class="subtitle">7 hari ke depan.</p></div>
+          </div>
+          <div class="mini-cal-list" id="miniCalendarList"></div>
+        </div>
+
+        <!-- Disimpan tersembunyi (bukan dihapus): pratinjau notifikasi dan ringkasan ruang kerja lama. -->
+        <div class="dash-parked" hidden>
+          <div class="dash-main">
+            <div class="card">
+              <div class="section-head">
+                <div><h3>Notifikasi</h3><p class="subtitle">Tugas yang menunggu tindakan atau baru selesai.</p></div>
+                <button class="btn-sm btn-ghost" data-goto="notifications">Lihat semua</button>
+              </div>
+              <div id="dashboardNotificationsList"></div>
+            </div>
+          </div>
+          <aside class="dash-side">
+            <div class="card">
+              <div class="section-head">
+                <div><h3>Ruang kerja saya</h3></div>
+                <button class="btn-sm btn-ghost" data-goto="workspaces">Kelola</button>
+              </div>
+              <div id="dashboardWorkspacePreview"></div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="productivityPanel" class="hidden" aria-label="Produktivitas">
         <div class="reminder-banner hidden" id="prodReminderBanner" role="status">
           <span class="welcome-dot" aria-hidden="true"></span>
           <span id="prodReminderText"></span>
         </div>
 
-        <div class="stats-grid dash-stats" id="dashboardSummary" aria-label="Ringkasan tugas"></div>
-
         <div class="dash-grid">
           <div class="dash-main">
-            <div class="card card-primary">
-              <div class="section-head">
-                <div>
-                  <h3>Tugas terdekat</h3>
-                  <p class="subtitle">Urut dari tenggat paling dekat, lintas ruang kerja.</p>
-                </div>
-              </div>
-              <div id="dashboardTaskList" class="dash-task-list"></div>
-            </div>
-
             <div class="card">
               <div class="section-head">
                 <div>
@@ -228,17 +250,9 @@
                 <p class="empty-hint">Belum cukup data</p>
               </div>
             </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div><h3>Notifikasi</h3><p class="subtitle">Tugas yang menunggu tindakan atau baru selesai.</p></div>
-                <button class="btn-sm btn-ghost" data-goto="notifications">Lihat semua</button>
-              </div>
-              <div id="dashboardNotificationsList"></div>
-            </div>
           </div>
 
-          <aside class="dash-side" aria-label="Mood dan tenggat">
+          <aside class="dash-side" aria-label="Mood">
             <div class="card mood-card">
               <div class="mood-title-row">
                 <h3>Mood hari ini</h3>
@@ -279,21 +293,6 @@
                 <div id="moodJournalList" class="mood-journal-list"></div>
               </div>
             </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div><h3>Tenggat mendekat</h3><p class="subtitle">7 hari ke depan.</p></div>
-              </div>
-              <div class="mini-cal-list" id="miniCalendarList"></div>
-            </div>
-
-            <div class="card">
-              <div class="section-head">
-                <div><h3>Ruang kerja saya</h3></div>
-                <button class="btn-sm btn-ghost" data-goto="workspaces">Kelola</button>
-              </div>
-              <div id="dashboardWorkspacePreview"></div>
-            </div>
           </aside>
         </div>
       </section>
@@ -313,6 +312,15 @@
       </section>
 
       <section id="notificationsPanel" class="hidden">
+        <div class="card card-primary" id="nearestTasksCard">
+          <div class="section-head">
+            <div>
+              <h3>Tugas terdekat</h3>
+              <p class="subtitle">Urut dari tenggat paling dekat, lintas ruang kerja.</p>
+            </div>
+          </div>
+          <div id="dashboardTaskList" class="dash-task-list"></div>
+        </div>
         <div class="card">
           <div class="section-head">
             <div><h2>Notifikasi</h2><p class="subtitle">Pembaruan tugas, laporan, dan pengumuman untuk Anda.</p></div>
