@@ -120,7 +120,7 @@ export function createProfile(ctx) {
           <ul class="profile-chips">${chips.map(c => `<li>${esc(c)}</li>`).join('')}</ul>
           ${(org || logoHtml(profile)) ? `<p class="profile-org">${logoHtml(profile)}<span>${org || ''}</span></p>` : ''}
         </div>
-        ${own ? '<div class="profile-actions"><button type="button" class="btn-sm btn-solid" data-pf="edit">Edit profil</button><button type="button" class="btn-sm btn-ghost" data-pf="settings">Pengaturan akun</button></div>' : ''}
+                ${own ? '<div class="profile-actions"><button type="button" class="btn-sm btn-solid" data-pf="edit">Edit profil</button><button type="button" class="btn-sm btn-ghost" data-pf="settings">Pengaturan akun</button><button type="button" class="btn-sm btn-danger" data-pf="logout">Keluar</button></div>' : ''}
       </div>
       ${unavailable ? '<p class="profile-note" role="status">Biodata belum bisa dimuat. Info dasar tetap ditampilkan.</p>' : ''}
       <dl class="profile-stats">${stats.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${v}</dd></div>`).join('')}</dl>
@@ -248,9 +248,10 @@ export function createProfile(ctx) {
     const host = $('profileView');
     host?.addEventListener('click', async e => {
       const a = e.target.closest('[data-pf]')?.dataset.pf;
-      if (a === 'edit') { await load(ctx.getUser().uid); editing = true; draftLogo = undefined; draftLogoNote = ''; renderEdit(); }
+            if (a === 'edit') { await load(ctx.getUser().uid); editing = true; draftLogo = undefined; draftLogoNote = ''; renderEdit(); }
       else if (a === 'cancel') { editing = false; draftLogo = undefined; draftLogoNote = ''; await renderOwn(); $('profileName')?.focus(); }
       else if (a === 'settings') ctx.openAccountSettings();
+      else if (a === 'logout') $('logoutBtn')?.click();
       else if (e.target.id === 'pfLogoRemove') { draftLogo = null; draftLogoNote = 'Logo akan dihapus saat disimpan.'; logoPreview(); }
       else if (e.target.id === 'pfLogoFetch') {
         const raw = $('pfLogoUrl').value.trim(); if (!raw) { draftLogoNote = 'Isi alamat gambar dulu.'; return logoPreview(); }
