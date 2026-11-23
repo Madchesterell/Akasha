@@ -730,3 +730,30 @@ body.theme-playful .card,body.theme-playful .summary-item,body.theme-playful .ws
 .dash-deadline .subtitle{display:none}
 .dash-deadline .mini-cal-info small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
+
+/* ===== Navigasi ruang kerja: bottom bar ponsel + dropdown pengaturan ===== */
+.ws-bottom-nav,.ws-settings-menu{display:none}
+@media (max-width:760px){
+  .workspace-sidebar{display:none}
+  .workspace-content{padding-bottom:calc(5.6rem + env(safe-area-inset-bottom))}
+  .ws-bottom-nav{display:flex;position:fixed;inset:auto 0 0 0;z-index:50;justify-content:space-around;gap:.15rem;padding:.3rem .4rem calc(.3rem + env(safe-area-inset-bottom));background:var(--surface);border-top:var(--bw) solid var(--border)}
+  .wsb-item{position:relative;display:flex;flex:1;flex-direction:column;align-items:center;justify-content:center;gap:.2rem;min-width:0;min-height:56px;padding:.4rem .15rem;background:transparent;border:var(--bw) solid transparent;border-radius:var(--r-md);color:var(--text-2);font-size:.625rem;font-weight:600;line-height:1.15;text-align:center;letter-spacing:-.01em}
+  .wsb-item:hover{background:var(--surface-2);color:var(--text)}
+  .wsb-item.active{background:var(--accent);color:var(--accent-ink);border-color:var(--border)}
+  .wsb-item[aria-expanded="true"]{background:var(--surface-2);color:var(--text);border-color:var(--accent)}
+  .wsb-item.active[aria-expanded="true"]{background:var(--accent);color:var(--accent-ink)}
+  .ws-settings-menu{display:flex;flex-direction:column;position:fixed;right:.5rem;bottom:calc(68px + env(safe-area-inset-bottom));z-index:55;min-width:15.5rem;max-width:calc(100vw - 1rem);padding:.35rem;background:var(--surface);border:var(--bw) solid var(--border-strong);border-radius:var(--r-md);box-shadow:var(--card-shadow)}
+  .ws-settings-menu.hidden{display:none !important}
+  .wsm-item{display:flex;align-items:center;gap:.7rem;width:100%;min-height:var(--tap);padding:.5rem .8rem;background:transparent;border:var(--bw) solid transparent;border-radius:var(--r-sm);color:var(--text);font-weight:600;text-align:left}
+  .wsm-item:hover,.wsm-item:focus-visible{background:var(--surface-2)}
+  .wsm-danger{color:var(--danger)}.wsm-danger:hover{background:var(--danger-bg)}
+  /* tampilan gabungan yang ringkas */
+  .ws-combo #calendarPanel:not(.hidden) + #activityPanel,.ws-combo #teamPanel:not(.hidden) + #divisionManagementPanel{margin-top:1rem}
+  .ws-combo .card{padding:.85rem}
+  .ws-combo .section-head .subtitle{display:none}
+  .ws-combo .cal-cell{min-height:64px;padding:.25rem}
+  .ws-combo #activityList{max-height:20rem;overflow-y:auto}
+  .ws-combo #presenceCard{display:none}
+}
+@media (min-width:400px) and (max-width:760px){.wsb-item{font-size:.6875rem}}
+@media (max-width:340px){.wsb-item{font-size:.5625rem;padding-inline:.05rem}}

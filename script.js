@@ -324,8 +324,10 @@ function showWorkspaceView() {
   $('announceCreator').classList.toggle('hidden', !isLead);
   $('dailyGoalSection')?.classList.toggle('hidden', isLead);
   $('roleControls').innerHTML = `<span>${isLead ? 'Lead' : 'Member'} · <strong>${escapeHtml(state.workerName)}</strong></span>`;
+  document.querySelectorAll('#wsSettingsMenu .lead-only').forEach(el => el.classList.toggle('hidden', !isLead));
+  closeWsSettings();
   startHeartbeat();
-  switchWorkspaceTab('task');
+  showWsSection('task');
 }
 const WS_TABS = {
   task: ['mainTaskContainer', 'tabTaskView'],
@@ -335,7 +337,51 @@ const WS_TABS = {
   division: ['divisionManagementPanel', 'tabDivisionView'],
   team: ['teamPanel', 'tabTeamView']
 };
+// ---- Navigasi ruang kerja ----
+// Desktop (>760px): satu tab = satu panel (sidebar). Ponsel (<=760px): bottom bar dengan 4 grup + dropdown pengaturan;
+// grup 'activity' menampilkan Kalender + Aktivitas, grup 'team' menampilkan Rekan Tim + Manajemen Divisi (divisi hanya Lead).
+const WS_GROUPS = { activity: ['calendar', 'activity'], announce: ['announce'], task: ['task'], team: ['team', 'division'] };
+const WS_TAB_TO_GROUP = { task: 'task', calendar: 'activity', activity: 'activity', announce: 'announce', team: 'team', division: 'team' };
+const WS_GROUP_TO_TAB = { task: 'task', activity: 'activity', announce: 'announce', team: 'team' };
+const WS_GROUP_BTN = { activity: 'wsbActivity', announce: 'wsbAnnounce', task: 'wsbTask', team: 'wsbTeam' };
+const wsMobileMQ = window.matchMedia('(max-width: 760px)');
+let wsGroup = 'task';
+function showWsSection(tab) {
+  wsGroup = WS_TAB_TO_GROUP[tab] || 'task';
+  if (wsMobileMQ.matches) switchWorkspaceGroup(wsGroup); else switchWorkspaceTab(tab);
+}
+function switchWorkspaceGroup(group) {
+  if (!WS_GROUPS[group]) group = 'task';
+  wsGroup = group;
+  const isLead = state.role === 'mentor';
+  const show = WS_GROUPS[group].filter(k => k !== 'division' || isLead);
+  Object.entries(WS_TABS).forEach(([k, [p, b]]) => {
+    $(p)?.classList.toggle('hidden', !show.includes(k));
+    $(b)?.classList.toggle('active', show.includes(k));
+  });
+  Object.entries(WS_GROUP_BTN).forEach(([g, id]) => {
+    $(id)?.classList.toggle('active', g === group);
+    $(id)?.setAttribute('aria-current', g === group ? 'page' : 'false');
+  });
+  $('workspaceView').classList.toggle('ws-combo', show.length > 1);
+  closeWsSettings();
+  if (show.includes('calendar')) renderCalendar();
+  if (show.includes('team')) renderTeamPanel();
+  if (show.includes('division')) renderDivisionManagement();
+}
+function closeWsSettings() {
+  $('wsSettingsMenu')?.classList.add('hidden');
+  $('wsbSettings')?.setAttribute('aria-expanded', 'false');
+}
+function toggleWsSettings() {
+  const menu = $('wsSettingsMenu'), open = menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', !open);
+  $('wsbSettings').setAttribute('aria-expanded', String(open));
+  if (open) menu.querySelector('.wsm-item:not(.hidden)')?.focus();
+}
 function switchWorkspaceTab(tab) {
+  wsGroup = WS_TAB_TO_GROUP[tab] || wsGroup;
+  $('workspaceView')?.classList.remove('ws-combo');
   Object.entries(WS_TABS).forEach(([k, [p, b]]) => {
     $(p)?.classList.toggle('hidden', k !== tab);
     $(b)?.classList.toggle('active', k === tab);
@@ -1352,6 +1398,17 @@ function setupEventListeners() {
   $('tabAnnouncementView').addEventListener('click', () => switchWorkspaceTab('announce'));
   $('tabDivisionView').addEventListener('click', () => switchWorkspaceTab('division'));
   $('tabTeamView').addEventListener('click', () => switchWorkspaceTab('team'));
+  // Bottom bar ruang kerja (ponsel)
+  document.querySelectorAll('#wsBottomNav [data-ws-group]').forEach(b => b.addEventListener('click', () => switchWorkspaceGroup(b.dataset.wsGroup)));
+  $('wsbSettings')?.addEventListener('click', toggleWsSettings);
+  [['wsmChangeCode', changeJoinCode], ['wsmDelete', deleteWorkspace], ['wsmBack', backToDashboard], ['wsmLeave', leaveWorkspace]]
+    .forEach(([id, fn]) => $(id)?.addEventListener('click', () => { closeWsSettings(); fn(); }));
+  document.addEventListener('click', e => { if (!e.target.closest('#wsSettingsMenu, #wsbSettings')) closeWsSettings(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeWsSettings(); });
+  wsMobileMQ.addEventListener('change', e => {
+    if ($('workspaceView').classList.contains('hidden')) return;
+    if (e.matches) switchWorkspaceGroup(wsGroup); else switchWorkspaceTab(WS_GROUP_TO_TAB[wsGroup]);
+  });
 
   document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => $(btn.dataset.close).classList.add('hidden')));
   document.querySelectorAll('.modal').forEach(m => m.addEventListener('click', e => {
