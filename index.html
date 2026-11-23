@@ -377,13 +377,20 @@
           <div class="daily-goal-form">
             <label class="sr-only" for="dailyGoalInput">Target harian</label>
             <input type="text" id="dailyGoalInput" placeholder="Contoh: tuntaskan revisi layout halaman utama" />
-            <button class="btn-primary btn-inline" id="saveDailyGoalBtn">Simpan target</button>
+            <button class="btn-primary btn-inline" id="saveDailyGoalBtn">Simpan</button>
           </div>
           <div id="dailyGoalDisplay" class="goal-badge"></div>
         </div>
 
         <div class="card" id="mentorTaskCreator">
-          <div class="section-head"><div><h2>Buat tugas baru</h2><p class="subtitle">Satu tugas dibuat per penerima saat Anda memilih divisi atau seluruh tim.</p></div></div>
+          <div class="section-head">
+            <div>
+              <h2>Buat tugas baru</h2>
+              <p class="subtitle">Satu tugas dibuat per penerima saat Anda memilih divisi atau seluruh tim.</p>
+            </div>
+            <button type="button" class="btn-sm btn-solid ws-task-form-toggle" id="toggleTaskFormBtn" aria-expanded="false" aria-controls="createTaskFormWrap">Tulis tugas</button>
+          </div>
+          <div id="createTaskFormWrap" class="create-task-form-wrap">
           <form id="createTaskForm">
             <div class="form-group">
               <label for="taskTitle">Judul tugas *</label>
@@ -437,6 +444,7 @@
             </div>
             <button type="submit" class="btn-primary">Bagikan tugas</button>
           </form>
+          </div>
         </div>
 
         <div class="card card-primary">

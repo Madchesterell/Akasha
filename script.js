@@ -862,13 +862,14 @@ function renderTasks() {
     const [statusText, statusClass] = statusInfo(task);
     const shortDesc = task.desc ? (task.desc.length > 60 ? task.desc.slice(0, 60) + '…' : task.desc) : '-';
     const diff = (task.difficulty || 'sedang').toLowerCase();
+    const diffLabel = diff.charAt(0).toUpperCase() + diff.slice(1);
     return `<tr class="${lv ? 'row-due-' + lv : ''}" onclick="openTaskDetailModal('${sid(task.id)}')">
-      <td data-label="Tugas"><div><button type="button" class="row-link">${escapeHtml(task.title)}</button>${(task.attachments || []).length ? `<span class="clip-count" title="Lampiran">Lampiran ${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td>
+      <td data-label="Tugas"><div class="task-title-cell"><button type="button" class="row-link">${escapeHtml(task.title)}</button>${(task.attachments || []).length ? `<span class="clip-count" title="Lampiran">Lampiran ${task.attachments.length}</span>` : ''}</div>${prog ? progressBar(prog) : ''}</td>
       <td data-label="Instruksi" class="task-desc-cell"><div class="task-desc" title="${escapeHtml(task.desc || '')}">${escapeHtml(shortDesc)}</div></td>
       <td data-label="Anggota" class="cell-sub">${escapeHtml(task.assignee)}</td>
-      <td data-label="Kesulitan" class="col-center"><span class="stat-pill diff-${diff}">${diff.charAt(0).toUpperCase() + diff.slice(1)}</span></td>
-      <td data-label="Status" class="col-center"><span class="stat-pill ${statusClass}">${statusText}${overdue ? ' · Terlambat' : ''}</span></td>
-      <td data-label="Tenggat" class="cell-sub${overdue ? ' cell-late' : ''}">${escapeHtml(task.endDate || '-')}${lv ? `<span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''}</td>
+      <td data-label="Kesulitan" class="col-center task-diff-cell"><span class="stat-pill diff-${diff}">${diffLabel}</span></td>
+      <td data-label="Status" class="col-center task-status-cell"><span class="task-pill-row"><span class="stat-pill diff-${diff} task-diff-inline">${diffLabel}</span><span class="stat-pill ${statusClass}">${statusText}${overdue ? ' · Terlambat' : ''}</span></span></td>
+      <td data-label="Tenggat" class="cell-sub task-due-cell${overdue ? ' cell-late' : ''}"><span class="task-due-wrap"><span class="task-due-date">${escapeHtml(task.endDate || '-')}</span>${lv ? `<span class="due-badge due-${lv}">${dueLabel(task)}</span>` : ''}</span></td>
     </tr>`;
   }).join('');
 }
@@ -1499,6 +1500,11 @@ function setupEventListeners() {
       targets.forEach((m, i) => notify([m.id], { kind: 'task', title: 'Tugas baru untuk Anda', body: taskTitle, taskId: refs[i].id }));
       setDefaultDates(); toggleWorkspaceDriveGroup(); updateAssigneeSelect();
       toast(`Tugas dibagikan ke ${targets.length} anggota`, 'success');
+      if (window.matchMedia('(max-width: 760px)').matches) {
+        $('createTaskFormWrap')?.classList.add('is-collapsed');
+        const tbtn = $('toggleTaskFormBtn');
+        if (tbtn) { tbtn.setAttribute('aria-expanded', 'false'); tbtn.textContent = 'Tulis tugas'; }
+      }
     } catch (err) { await showAlert('Gagal: ' + err.message); }
   });
 
@@ -1597,6 +1603,18 @@ function setupEventListeners() {
     $('toggleAnnounceFormBtn').setAttribute('aria-expanded', String(open));
     if (open) $('announceTitle').focus();
   });
+  $('toggleTaskFormBtn')?.addEventListener('click', () => {
+    const wrap = $('createTaskFormWrap');
+    if (!wrap) return;
+    const open = wrap.classList.toggle('is-collapsed') === false;
+    const btn = $('toggleTaskFormBtn');
+    btn.setAttribute('aria-expanded', String(open));
+    btn.textContent = open ? 'Tutup form' : 'Tulis tugas';
+    if (open) $('taskTitle')?.focus();
+  });
+  if (window.matchMedia('(max-width: 760px)').matches) {
+    $('createTaskFormWrap')?.classList.add('is-collapsed');
+  }
   $('calPrev').addEventListener('click', () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() - 1, 1); calExpanded = null; renderCalendar(); });
   $('calNext').addEventListener('click', () => { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + 1, 1); calExpanded = null; renderCalendar(); });
   $('calToday').addEventListener('click', () => { calMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1); calExpanded = null; renderCalendar(); });

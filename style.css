@@ -757,3 +757,128 @@ body.theme-playful .card,body.theme-playful .summary-item,body.theme-playful .ws
 }
 @media (min-width:400px) and (max-width:760px){.wsb-item{font-size:.6875rem}}
 @media (max-width:340px){.wsb-item{font-size:.5625rem;padding-inline:.05rem}}
+
+
+/* ===== Workspace mobile: overflow + ringkas (≤760px) ===== */
+.ws-task-form-toggle{display:none}
+.task-diff-inline{display:none}
+.task-title-cell{min-width:0;overflow-wrap:anywhere}
+.task-pill-row{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:.35rem}
+.task-due-wrap{display:inline-flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:.35rem;min-width:0}
+.task-due-date{overflow-wrap:anywhere}
+
+#workspaceView{min-width:0;max-width:100vw;overflow-x:hidden}
+.workspace-content{overflow-x:hidden}
+.workspace-content .card,
+.workspace-content .form-group,
+.workspace-content .task-toolbar,
+.workspace-content .select-shell,
+.workspace-content .input-with-btn{min-width:0;max-width:100%}
+.workspace-content input:not([type=checkbox]):not([type=radio]),
+.workspace-content textarea,
+.workspace-content .select-trigger{max-width:100%}
+
+.navbar .brand{min-width:0;flex:1}
+.navbar .brand h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;font-size:clamp(1.05rem,4.2vw,1.5rem)}
+.navbar-right{flex:none;max-width:42%;min-width:0}
+.role-controls{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+@media (max-width:760px){
+  #workspaceView,
+  .workspace-body,
+  .workspace-content,
+  #mainTaskContainer{overflow-x:hidden;min-width:0;max-width:100%}
+  .workspace-content{padding:0.85rem 0.85rem calc(5.6rem + env(safe-area-inset-bottom))}
+  #mainTaskContainer .card{padding:0.9rem;margin-bottom:0.85rem}
+  #mainTaskContainer .section-head{margin-bottom:0.7rem;gap:0.5rem}
+  #mainTaskContainer .section-head h2{font-size:1.15rem}
+  #mainTaskContainer .card-primary .subtitle{display:none}
+
+  #dailyGoalSection .subtitle{display:none}
+  #dailyGoalSection .section-head{margin-bottom:0.5rem}
+  #dailyGoalSection .daily-goal-form{
+    flex-direction:row;
+    align-items:stretch;
+    gap:0.45rem;
+  }
+  #dailyGoalSection .daily-goal-form input{flex:1;min-width:0}
+  #dailyGoalSection .daily-goal-form .btn-inline{
+    width:auto;
+    flex:none;
+    padding-inline:0.85rem;
+    white-space:nowrap;
+  }
+  #dailyGoalSection .goal-badge:not(:empty){margin-top:0.55rem;padding:0.45rem 0.7rem;font-size:0.9rem}
+
+  .ws-task-form-toggle{display:inline-flex}
+  #createTaskFormWrap.is-collapsed{display:none !important}
+  #mentorTaskCreator .subtitle{display:none}
+  #mentorTaskCreator .form-group{margin-bottom:0.7rem}
+  #mentorTaskCreator textarea.field{min-height:4.5rem}
+
+  .task-toolbar{
+    grid-template-columns:minmax(0,1fr);
+    gap:0.45rem;
+    margin-bottom:0.75rem;
+  }
+  .task-toolbar .select-shell,
+  .task-toolbar input{min-width:0;max-width:100%}
+
+  .table-scroll{overflow-x:hidden;max-width:100%}
+  table.task-table{width:100%;max-width:100%}
+  table.task-table tr{
+    margin-bottom:0.55rem;
+    padding:0.65rem 0.75rem;
+    max-width:100%;
+    overflow:hidden;
+  }
+  table.task-table td{
+    gap:0.5rem 0.75rem;
+    min-width:0;
+    max-width:100%;
+  }
+  table.task-table td::before{max-width:38%;overflow-wrap:anywhere}
+  table.task-table td > *{min-width:0;max-width:100%}
+
+  table.task-table td[data-label="Instruksi"],
+  table.task-table td.task-diff-cell{display:none !important}
+  .task-diff-inline{display:inline-flex}
+  table.task-table td.task-status-cell{align-items:center}
+  table.task-table td.task-status-cell .task-pill-row{justify-content:flex-end}
+  table.task-table td[data-label="Tugas"]{
+    display:block;
+    text-align:left;
+    padding-bottom:0.45rem;
+    border-bottom:var(--bw) solid var(--border);
+    margin-bottom:0.25rem;
+  }
+  table.task-table td[data-label="Tugas"]::before{content:none}
+  .task-title-cell{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:0.35rem 0.5rem;
+  }
+  .row-link{
+    display:inline;
+    white-space:normal;
+    overflow-wrap:anywhere;
+    font-size:0.95rem;
+  }
+  .task-desc{max-width:none;white-space:normal;overflow-wrap:anywhere}
+  .progress-row{max-width:100%}
+  table.task-table td.task-due-cell{align-items:center}
+  .task-due-wrap{justify-content:flex-end}
+  .due-badge{margin-left:0}
+
+  table.task-table td[data-label="Anggota"]{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+}
+
+@media (min-width:761px){
+  #createTaskFormWrap.is-collapsed{display:block !important}
+  .task-diff-inline{display:none !important}
+}
