@@ -284,7 +284,27 @@ function showDashboardView() {
   loadUserWorkspaces();
   switchDashboardSection('home');
 }
+// ---- Tata letak dashboard: desktop (>760px) = dashboard lengkap, ponsel (<=760px) = ringkas ----
+// Kartu hanya ada satu salinan (ID tetap unik); JS memindahkannya antar wadah mengikuti ukuran layar.
+const dashDesktopMQ = window.matchMedia('(min-width: 761px)');
+function layoutDashboard() {
+  const desk = dashDesktopMQ.matches, home = $('dashboardHomePanel');
+  if (!home || !$('dashMain') || !$('dashSide')) return;
+  if (desk) {
+    $('dashMain').prepend($('nearestTasksCard'), $('habitCard'), $('insightCard'));
+    $('dashSide').prepend($('moodCard'), $('deadlineCard'));
+    home.insertBefore($('prodReminderBanner'), $('dashboardSummary'));
+  } else {
+    $('dashboardSummary').after($('deadlineCard'));
+    $('productivityPanel').prepend($('prodReminderBanner'));
+    $('prodMain').append($('habitCard'), $('insightCard'));
+    $('prodSide').append($('moodCard'));
+    $('notificationsPanel').prepend($('nearestTasksCard'));
+  }
+  $('deadlineCard')?.classList.toggle('dash-deadline', !desk);
+}
 function switchDashboardSection(section) {
+  if (section === 'productivity' && dashDesktopMQ.matches) section = 'home'; // di desktop, isinya sudah ada di dashboard
   const panels = { home: 'dashboardHomePanel', workspaces: 'myWorkspacesPanel', productivity: 'productivityPanel', notifications: 'notificationsPanel', profile: 'profilePanel' };
   Object.entries(panels).forEach(([k, id]) => $(id)?.classList.toggle('hidden', k !== section));
   $('dashboardNavBtn')?.classList.toggle('active', section === 'home');
@@ -562,12 +582,12 @@ function renderMiniCalendar() {
   items.sort((a, b) => a.date - b.date);
   if (!items.length) { el.innerHTML = '<div class="mini-cal-empty">Tidak ada tenggat dalam 7 hari ke depan.</div>'; return; }
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-  const MAX = 5;
+  const desk = dashDesktopMQ.matches, MAX = desk ? 8 : 5;
   el.innerHTML = items.slice(0, MAX).map(({ t, ws, date }) => {
     const lv = dueLevel(t);
     return `<button type="button" class="mini-cal-item ${lv ? 'due-' + lv : ''}" onclick="openWorkspace('${sid(ws.id)}')">
       <span class="mini-cal-date"><span class="day">${date.getDate()}</span><span class="mon">${months[date.getMonth()]}</span></span>
-      <span class="mini-cal-info"><strong>${escapeHtml(t.title)}</strong><small>${escapeHtml(ws.name)}${ws.role === 'mentor' && t.assignee ? ' · ' + escapeHtml(t.assignee) : ''}</small></span>
+      <span class="mini-cal-info"><strong>${escapeHtml(t.title)}</strong><small>${escapeHtml(ws.name)}${desk || ws.role === 'mentor' ? ' · ' + escapeHtml(t.assignee) : ''}</small></span>
       ${lv ? `<span class="due-badge due-${lv}">${dueLabel(t)}</span>` : ''}
     </button>`;
   }).join('') + (items.length > MAX ? `<div class="mini-cal-more">+${items.length - MAX} tenggat lainnya</div>` : '');
@@ -1399,6 +1419,12 @@ function setupEventListeners() {
   $('tabAnnouncementView').addEventListener('click', () => switchWorkspaceTab('announce'));
   $('tabDivisionView').addEventListener('click', () => switchWorkspaceTab('division'));
   $('tabTeamView').addEventListener('click', () => switchWorkspaceTab('team'));
+  layoutDashboard();
+  dashDesktopMQ.addEventListener('change', () => {
+    layoutDashboard();
+    if (dashDesktopMQ.matches && !$('productivityPanel').classList.contains('hidden')) switchDashboardSection('home');
+    renderMiniCalendar();
+  });
   // Bottom bar ruang kerja (ponsel)
   document.querySelectorAll('#wsBottomNav [data-ws-group]').forEach(b => b.addEventListener('click', () => switchWorkspaceGroup(b.dataset.wsGroup)));
   $('wsbSettings')?.addEventListener('click', toggleWsSettings);

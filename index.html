@@ -181,10 +181,11 @@
           <div class="mini-cal-list" id="miniCalendarList"></div>
         </div>
 
-        <!-- Disimpan tersembunyi (bukan dihapus): pratinjau notifikasi dan ringkasan ruang kerja lama. -->
-        <div class="dash-parked" hidden>
-          <div class="dash-main">
-            <div class="card">
+        <!-- Grid dashboard lengkap (desktop). Di ponsel grid ini disembunyikan; JS (layoutDashboard) memindahkan kartu
+             Tugas terdekat, Kebiasaan, Insight, Mood, dan Tenggat ke tempat ringkasnya. -->
+        <div class="dash-grid" id="dashDesktopGrid">
+          <div class="dash-main" id="dashMain">
+            <div class="card" id="dashNotifCard">
               <div class="section-head">
                 <div><h3>Notifikasi</h3><p class="subtitle">Tugas yang menunggu tindakan atau baru selesai.</p></div>
                 <button class="btn-sm btn-ghost" data-goto="notifications">Lihat semua</button>
@@ -192,8 +193,8 @@
               <div id="dashboardNotificationsList"></div>
             </div>
           </div>
-          <aside class="dash-side">
-            <div class="card">
+          <aside class="dash-side" id="dashSide" aria-label="Mood, tenggat, dan ruang kerja">
+            <div class="card" id="dashWorkspacesCard">
               <div class="section-head">
                 <div><h3>Ruang kerja saya</h3></div>
                 <button class="btn-sm btn-ghost" data-goto="workspaces">Kelola</button>
@@ -211,8 +212,8 @@
         </div>
 
         <div class="dash-grid">
-          <div class="dash-main">
-            <div class="card">
+          <div class="dash-main" id="prodMain">
+            <div class="card" id="habitCard">
               <div class="section-head">
                 <div>
                   <h3>Kebiasaan harian</h3>
@@ -254,8 +255,8 @@
             </div>
           </div>
 
-          <aside class="dash-side" aria-label="Mood">
-            <div class="card mood-card">
+          <aside class="dash-side" id="prodSide" aria-label="Mood">
+            <div class="card mood-card" id="moodCard">
               <div class="mood-title-row">
                 <h3>Mood hari ini</h3>
                 <span class="mood-streak-pill hidden" id="moodStreakPill"></span>

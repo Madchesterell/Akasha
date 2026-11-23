@@ -62,6 +62,8 @@
       if (el.closest('.hidden') && el.closest('.hidden') !== panel) return false;
       // parkiran / tersembunyi di home
       if (el.closest('.dash-parked')) return false;
+      // elemen yang tidak dirender (mis. grid desktop yang disembunyikan di ponsel) tidak perlu dianimasikan
+      if (el.offsetParent === null) return false;
       seen.add(el);
       return true;
     });

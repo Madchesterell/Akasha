@@ -882,3 +882,7 @@ body.theme-playful .card,body.theme-playful .summary-item,body.theme-playful .ws
   #createTaskFormWrap.is-collapsed{display:block !important}
   .task-diff-inline{display:none !important}
 }
+
+/* ===== Dashboard: desktop lengkap, ponsel ringkas ===== */
+@media (min-width:761px){#productivityNavBtn{display:none}}
+@media (max-width:760px){#dashDesktopGrid{display:none}}
