@@ -89,7 +89,7 @@
       const isInt = Number.isInteger(target) && !match[0].includes('.');
       el.dataset.akCountLock = '1';
       el.classList.add('ak-count');
-      const dur = 1500;
+      const dur = 1200;
       const t0 = performance.now();
       const from = 0;
       function frame(now) {
@@ -158,7 +158,7 @@
     setTimeout(() => {
       if (tokens.get(panel) !== token) return;
       runCountUp(panel);
-    }, 250);
+    }, 50);
   }
 
   function animateView(view) {
