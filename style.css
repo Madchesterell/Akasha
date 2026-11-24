@@ -886,3 +886,37 @@ body.theme-playful .card,body.theme-playful .summary-item,body.theme-playful .ws
 /* ===== Dashboard: desktop lengkap, ponsel ringkas ===== */
 @media (min-width:761px){#productivityNavBtn{display:none}}
 @media (max-width:760px){#dashDesktopGrid{display:none}}
+
+/* Dashboard desktop: 3 kartu produktivitas lebih ringkas */
+@media (min-width: 761px) {
+  #dashboardHomePanel #habitCard .section-head .subtitle,
+  #dashboardHomePanel #habitCard #habitCatFilters,
+  #dashboardHomePanel #habitCard #addHabitBtn {
+    display: none !important;
+  }
+  #dashboardHomePanel #habitCard .section-head {
+    margin-bottom: 0.7rem;
+  }
+
+  #dashboardHomePanel #moodCard .subtitle,
+  #dashboardHomePanel #moodCard #moodPicker,
+  #dashboardHomePanel #moodCard #moodStreakPill,
+  #dashboardHomePanel #moodCard #moodTagRow,
+  #dashboardHomePanel #moodCard .mood-form {
+    display: none !important;
+  }
+  #dashboardHomePanel #moodCard .mood-title-row {
+    margin-bottom: 0.5rem;
+  }
+  #dashboardHomePanel #moodCard .mood-chart-wrap {
+    border-top: 0;
+    padding-top: 0;
+  }
+
+  #dashboardHomePanel #insightCard #openRecapBtn {
+    display: none !important;
+  }
+  #dashboardHomePanel #insightCard .section-head .subtitle {
+    display: none !important;
+  }
+}
