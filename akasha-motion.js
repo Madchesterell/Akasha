@@ -89,12 +89,12 @@
       const isInt = Number.isInteger(target) && !match[0].includes('.');
       el.dataset.akCountLock = '1';
       el.classList.add('ak-count');
-      const dur = 450;
+      const dur = 1500;
       const t0 = performance.now();
       const from = 0;
       function frame(now) {
         const p = Math.min(1, (now - t0) / dur);
-        const eased = 1 - Math.pow(1 - p, 3);
+        const eased = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
         const v = from + (target - from) * eased;
         el.textContent = prefix + (isInt ? Math.round(v) : v.toFixed(1)) + suffix;
         if (p < 1) requestAnimationFrame(frame);
@@ -158,7 +158,7 @@
     setTimeout(() => {
       if (tokens.get(panel) !== token) return;
       runCountUp(panel);
-    }, 40);
+    }, 250);
   }
 
   function animateView(view) {
