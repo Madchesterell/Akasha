@@ -42,7 +42,13 @@ const $ = (id) => document.getElementById(id);
 
 // Utilitas
 function escapeHtml(str) {
-  return String(str ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  return String(str ?? '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+  }[c]));
 }
 function safeUrl(u) {
   try {
@@ -58,16 +64,20 @@ const mineTask = (t, name) => t.assigneeUid ? t.assigneeUid === state.user?.uid 
 const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_RE = /^[A-Z0-9]{6,8}$/;
 function randomCode(n = 8) {
-  const a = new Uint32Array(n); crypto.getRandomValues(a);
+  const a = new Uint32Array(n);
+  crypto.getRandomValues(a);
   return Array.from(a, x => CODE_CHARS[x % CODE_CHARS.length]).join('');
 }
 const codeRef = c => doc(db, 'joinCodes', c);
 const AUTH_MSG = {
-  'auth/invalid-credential': 'Email atau kata sandi salah.', 'auth/wrong-password': 'Email atau kata sandi salah.',
-  'auth/user-not-found': 'Email atau kata sandi salah.', 'auth/invalid-email': 'Format email tidak valid.',
+  'auth/invalid-credential': 'Email atau kata sandi salah.',
+  'auth/wrong-password': 'Email atau kata sandi salah.',
+  'auth/user-not-found': 'Email atau kata sandi salah.',
+  'auth/invalid-email': 'Format email tidak valid.',
   'auth/too-many-requests': 'Terlalu banyak percobaan. Coba lagi beberapa menit lagi.',
   'auth/email-already-in-use': 'Email ini sudah terdaftar. Coba masuk atau atur ulang kata sandi.',
-  'auth/weak-password': 'Kata sandi terlalu lemah.', 'auth/network-request-failed': 'Koneksi bermasalah. Periksa internet Anda.'
+  'auth/weak-password': 'Kata sandi terlalu lemah.',
+  'auth/network-request-failed': 'Koneksi bermasalah. Periksa internet Anda.'
 };
 const authMessage = err => AUTH_MSG[err?.code] || 'Terjadi kesalahan. Coba lagi.';
 function localDate(d = new Date()) {
@@ -94,11 +104,19 @@ function statusInfo(t) {
   return ['Belum Dimulai', 's-todo'];
 }
 function toast(msg, type = 'info') {
-  const c = $('toastContainer'); if (!c) return;
+  const c = $('toastContainer');
+  if (!c) return;
+
   const el = document.createElement('div');
-  el.className = `toast ${type}`; el.textContent = msg;
+  el.className = `toast ${type}`;
+  el.textContent = msg;
   c.appendChild(el);
-  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3000);
+
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity .3s';
+    setTimeout(() => el.remove(), 300);
+  }, 3000);
 }
 const fmtTime = ts => {
   const d = ts?.toDate ? ts.toDate() : (ts ? new Date(ts) : null);
@@ -1708,79 +1726,7 @@ const MILESTONES = [7, 21, 30, 66, 100];
 let prodData = null;
 let selectedMood = null;
 let selectedMoodTags = [];
-function renderHabits() {
-  ensureProdToday();
-  const list = $('habitList');
-  if (!list) return;
-  const habits = activeHabits();
-  if (!habits.length) {
-    list.innerHTML = '<p class="empty-hint" style="padding:.5rem 0">Belum ada kebiasaan. Tekan “Tambah kebiasaan” untuk mulai.</p>';
-  } else {
-    list.innerHTML = habits.map(h => {
-      const icon = h.icon || (h.name || '#').trim().charAt(0).toUpperCase();
-      const milestone = MILESTONES.filter(m => h.streak >= m).pop();
-      const celebrated = milestone && (prodData.celebratedMilestones[h.id] || []).includes(milestone);
-      let progress = '';
-      if (h.schedule?.type === 'weekly') {
-        const t = h.schedule.target || 3;
-        const n = weeklyDoneCount(h, localDate());
-        progress = `<span class="habit-progress">${n}/${t} minggu ini</span>`;
-      }
-      const open = expandedHabitId === h.id;
-      const cells = [];
-      for (let i = 55; i >= 0; i--) {
-        const d = new Date(); d.setDate(d.getDate() - i);
-        const ds = localDate(d);
-        const on = !!h.history?.[ds];
-        cells.push(`<div class="contrib-cell ${on ? 'lv3' : 'lv0'}" title="${ds}"></div>`);
-      }
-      let done30 = 0;
-      for (let i = 0; i < 30; i++) {
-        const d = new Date(); d.setDate(d.getDate() - i);
-        if (h.history?.[localDate(d)]) done30++;
-      }
-      return `
-      <div class="habit-block" data-id="${escapeHtml(h.id)}">
-        <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${escapeHtml(h.id)}">
-          <button type="button" class="habit-check" data-toggle="${escapeHtml(h.id)}" aria-pressed="${h.doneToday}" aria-label="Tandai ${escapeHtml(h.name)} selesai hari ini">${h.doneToday ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : ''}</button>
-          <span class="habit-icon">${escapeHtml(icon)}</span>
-          <button type="button" class="habit-name" aria-expanded="${open}">${escapeHtml(h.name)}</button>
-          ${progress}
-          <span class="habit-days">${h.streak} hari${milestone ? ' <span class="milestone-pill">Milestone ' + milestone + '</span>' : ''}</span>
-          <button type="button" class="habit-edit-btn" data-edit="${escapeHtml(h.id)}" aria-label="Edit ${escapeHtml(h.name)}">Edit</button>
-        </div>
-        <div class="habit-detail ${open ? '' : 'hidden'}" data-detail="${escapeHtml(h.id)}">
-          <div class="habit-detail-stats">
-            <span>${done30}/30 hari · ${Math.round(done30 / 30 * 100)}%</span>
-            <span>Streak ${h.streak} · terpanjang ${h.longest}</span>
-            <span>Freeze: ${h.freezes}</span>
-          </div>
-          <div class="contrib-graph habit-mini-graph">${cells.join('')}</div>
-        </div>
-      </div>`;
-    }).join('');
 
-    list.querySelectorAll('[data-toggle]').forEach(el => {
-      el.addEventListener('click', e => { e.stopPropagation(); toggleHabit(el.dataset.toggle); });
-    });
-    list.querySelectorAll('.habit-item').forEach(el => {
-      el.addEventListener('click', e => {
-        if (e.target.closest('[data-toggle]') || e.target.closest('[data-edit]')) return;
-        const id = el.dataset.id;
-        expandedHabitId = expandedHabitId === id ? null : id;
-        renderHabits();
-      });
-    });
-    list.querySelectorAll('[data-edit]').forEach(btn => {
-      btn.addEventListener('click', e => {
-        e.stopPropagation();
-        openHabitModal(btn.dataset.edit);
-      });
-    });
-  }
-  // ... lanjut streak info + contribGraph (tidak diubah) ...
-}
-let expandedHabitId = null;
 let moodMonthCursor = null; // Date at month start
 let moodEditSelected = null;
 let prodSyncTimer = null;
@@ -2013,65 +1959,88 @@ function ensureProdToday() {
   rollOverDay();
 }
 
+let expandedHabitId = null;
+let habitCatFilter = 'all';
+
 function activeHabits() {
   return (prodData.habits || []).filter(h => !h.archived && (habitCatFilter === 'all' || h.category === habitCatFilter));
 }
 
 function renderHabits() {
   ensureProdToday();
+
   const list = $('habitList');
   if (!list) return;
+
   const habits = activeHabits();
+
   if (!habits.length) {
     list.innerHTML = '<p class="empty-hint" style="padding:.5rem 0">Belum ada kebiasaan. Tekan “Tambah kebiasaan” untuk mulai.</p>';
   } else {
     list.innerHTML = habits.map(h => {
       const icon = h.icon || (h.name || '#').trim().charAt(0).toUpperCase();
       const milestone = MILESTONES.filter(m => h.streak >= m).pop();
-      const celebrated = milestone && (prodData.celebratedMilestones[h.id] || []).includes(milestone);
+
       let progress = '';
       if (h.schedule?.type === 'weekly') {
         const t = h.schedule.target || 3;
         const n = weeklyDoneCount(h, localDate());
         progress = `<span class="habit-progress">${n}/${t} minggu ini</span>`;
       }
+
       const open = expandedHabitId === h.id;
+
       const cells = [];
       for (let i = 55; i >= 0; i--) {
-        const d = new Date(); d.setDate(d.getDate() - i);
+        const d = new Date();
+        d.setDate(d.getDate() - i);
         const ds = localDate(d);
         const on = !!h.history?.[ds];
         cells.push(`<div class="contrib-cell ${on ? 'lv3' : 'lv0'}" title="${ds}"></div>`);
       }
+
       let done30 = 0;
       for (let i = 0; i < 30; i++) {
-        const d = new Date(); d.setDate(d.getDate() - i);
+        const d = new Date();
+        d.setDate(d.getDate() - i);
         if (h.history?.[localDate(d)]) done30++;
       }
+
       return `
-      <div class="habit-block" data-id="${escapeHtml(h.id)}">
-        <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${escapeHtml(h.id)}">
-          <button type="button" class="habit-check" data-toggle="${escapeHtml(h.id)}" aria-pressed="${h.doneToday}" aria-label="Tandai ${escapeHtml(h.name)} selesai hari ini">${h.doneToday ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : ''}</button>
-          <span class="habit-icon">${escapeHtml(icon)}</span>
-          <button type="button" class="habit-name" aria-expanded="${open}">${escapeHtml(h.name)}</button>
-          ${progress}
-          <span class="habit-days">${h.streak} hari${milestone ? ' <span class="milestone-pill">Milestone ' + milestone + '</span>' : ''}</span>
-          <button type="button" class="habit-edit-btn" data-edit="${escapeHtml(h.id)}" aria-label="Edit ${escapeHtml(h.name)}">Edit</button>
-        </div>
-        <div class="habit-detail ${open ? '' : 'hidden'}" data-detail="${escapeHtml(h.id)}">
-          <div class="habit-detail-stats">
-            <span>${done30}/30 hari · ${Math.round(done30 / 30 * 100)}%</span>
-            <span>Streak ${h.streak} · terpanjang ${h.longest}</span>
-            <span>Freeze: ${h.freezes}</span>
+        <div class="habit-block" data-id="${escapeHtml(h.id)}">
+          <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${escapeHtml(h.id)}">
+            <button type="button" class="habit-check" data-toggle="${escapeHtml(h.id)}" aria-pressed="${h.doneToday}" aria-label="Tandai ${escapeHtml(h.name)} selesai hari ini">
+              ${h.doneToday ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : ''}
+            </button>
+            <span class="habit-icon">${escapeHtml(icon)}</span>
+            <button type="button" class="habit-name" aria-expanded="${open}">${escapeHtml(h.name)}</button>
+            ${progress}
+            <span class="habit-days">
+              ${h.streak} hari
+              ${milestone ? ' <span class="milestone-pill">Milestone ' + milestone + '</span>' : ''}
+            </span>
+            <button type="button" class="habit-edit-btn" data-edit="${escapeHtml(h.id)}" aria-label="Edit ${escapeHtml(h.name)}">Edit</button>
           </div>
-          <div class="contrib-graph habit-mini-graph">${cells.join('')}</div>
+
+          <div class="habit-detail ${open ? '' : 'hidden'}" data-detail="${escapeHtml(h.id)}">
+            <div class="habit-detail-stats">
+              <span>${done30}/30 hari · ${Math.round(done30 / 30 * 100)}%</span>
+              <span>Streak ${h.streak} · terpanjang ${h.longest}</span>
+              <span>Freeze: ${h.freezes}</span>
+            </div>
+            <div class="contrib-graph habit-mini-graph">${cells.join('')}</div>
+          </div>
         </div>
-      </div>`;
+      `;
     }).join('');
 
     list.querySelectorAll('[data-toggle]').forEach(el => {
-      el.addEventListener('click', e => { e.stopPropagation(); toggleHabit(el.dataset.toggle); });
+      el.addEventListener('click', e => {
+        e.stopPropagation();
+        toggleHabit(el.dataset.toggle);
+      });
     });
+
     list.querySelectorAll('.habit-item').forEach(el => {
       el.addEventListener('click', e => {
         if (e.target.closest('[data-toggle]') || e.target.closest('[data-edit]')) return;
@@ -2080,6 +2049,7 @@ function renderHabits() {
         renderHabits();
       });
     });
+
     list.querySelectorAll('[data-edit]').forEach(btn => {
       btn.addEventListener('click', e => {
         e.stopPropagation();
@@ -2089,25 +2059,36 @@ function renderHabits() {
   }
 
   const top = habits.length ? habits.reduce((a, b) => (a.streak >= b.streak ? a : b), habits[0]) : null;
+
   const info = $('habitStreakInfo');
-  if (info) info.textContent = top && top.streak > 0
-    ? `${top.name} · ${top.streak} hari beruntun · terpanjang ${top.longest}`
-    : (habits.length ? 'Belum ada streak. Centang kebiasaan hari ini.' : '');
+  if (info) {
+    info.textContent = top && top.streak > 0
+      ? `${top.name} · ${top.streak} hari beruntun · terpanjang ${top.longest}`
+      : (habits.length ? 'Belum ada streak. Centang kebiasaan hari ini.' : '');
+  }
 
   const graph = $('contribGraph');
   if (graph) {
     let recent = (prodData.habitHistory || []).slice(-105);
+
     if (recent.length < 105) {
       const pad = 105 - recent.length;
       const filled = [];
+
       for (let i = pad - 1; i >= 0; i--) {
-        const d = new Date(); d.setDate(d.getDate() - (recent.length + i));
+        const d = new Date();
+        d.setDate(d.getDate() - (recent.length + i));
         filled.push({ date: localDate(d), level: 0 });
       }
+
       recent = filled.concat(recent);
     }
-    graph.innerHTML = recent.map(c => `<div class="contrib-cell lv${c.level || 0}" title="${escapeHtml(c.date || '')}"></div>`).join('');
+
+    graph.innerHTML = recent.map(c =>
+      `<div class="contrib-cell lv${c.level || 0}" title="${escapeHtml(c.date || '')}"></div>`
+    ).join('');
   }
+
   renderReminderBanner();
   renderInsight();
 }
@@ -2115,17 +2096,24 @@ function renderHabits() {
 function toggleHabit(id) {
   const h = prodData.habits.find(x => x.id === id);
   if (!h) return;
+
   const today = localDate();
+
   if (!isScheduledDay(h, today) && h.schedule?.type === 'days') {
     toast('Hari ini tidak terjadwal untuk kebiasaan ini', 'info');
     return;
   }
+
   h.doneToday = !h.doneToday;
+
   if (!h.history) h.history = {};
+
   if (h.doneToday) {
     h.history[today] = true;
     h.streak += 1;
+
     if (h.streak > h.longest) h.longest = h.streak;
+
     MILESTONES.forEach(m => {
       if (h.streak === m) {
         if (!prodData.celebratedMilestones[h.id]) prodData.celebratedMilestones[h.id] = [];
@@ -2139,14 +2127,22 @@ function toggleHabit(id) {
     delete h.history[today];
     h.streak = Math.max(0, h.streak - 1);
   }
+
   let cell = prodData.habitHistory.find(c => c.date === today);
-  if (!cell) { cell = { date: today, level: 0 }; prodData.habitHistory.push(cell); }
+  if (!cell) {
+    cell = { date: today, level: 0 };
+    prodData.habitHistory.push(cell);
+  }
+
   const active = prodData.habits.filter(x => !x.archived);
   const doneCount = active.filter(x => x.doneToday).length;
+
   cell.level = Math.min(4, Math.ceil((doneCount / Math.max(1, active.length)) * 4));
+
   saveProd();
   renderHabits();
   renderGreeting();
+
   toast(h.doneToday ? `Selesai: ${h.name}` : `Dibatalkan: ${h.name}`, 'success');
 }
 
