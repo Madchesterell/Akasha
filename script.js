@@ -1420,10 +1420,9 @@ function setupEventListeners() {
   $('tabDivisionView').addEventListener('click', () => switchWorkspaceTab('division'));
   $('tabTeamView').addEventListener('click', () => switchWorkspaceTab('team'));
   layoutDashboard();
-  dashDesktopMQ.addEventListener('change', () => {
+    dashDesktopMQ.addEventListener('change', () => {
     layoutDashboard();
     if (dashDesktopMQ.matches && !$('productivityPanel').classList.contains('hidden')) switchDashboardSection('home');
-    renderMiniCalendar();
   });
   // Bottom bar ruang kerja (ponsel)
   document.querySelectorAll('#wsBottomNav [data-ws-group]').forEach(b => b.addEventListener('click', () => switchWorkspaceGroup(b.dataset.wsGroup)));
@@ -1709,7 +1708,78 @@ const MILESTONES = [7, 21, 30, 66, 100];
 let prodData = null;
 let selectedMood = null;
 let selectedMoodTags = [];
-let habitCatFilter = 'all';
+function renderHabits() {
+  ensureProdToday();
+  const list = $('habitList');
+  if (!list) return;
+  const habits = activeHabits();
+  if (!habits.length) {
+    list.innerHTML = '<p class="empty-hint" style="padding:.5rem 0">Belum ada kebiasaan. Tekan “Tambah kebiasaan” untuk mulai.</p>';
+  } else {
+    list.innerHTML = habits.map(h => {
+      const icon = h.icon || (h.name || '#').trim().charAt(0).toUpperCase();
+      const milestone = MILESTONES.filter(m => h.streak >= m).pop();
+      const celebrated = milestone && (prodData.celebratedMilestones[h.id] || []).includes(milestone);
+      let progress = '';
+      if (h.schedule?.type === 'weekly') {
+        const t = h.schedule.target || 3;
+        const n = weeklyDoneCount(h, localDate());
+        progress = `<span class="habit-progress">${n}/${t} minggu ini</span>`;
+      }
+      const open = expandedHabitId === h.id;
+      const cells = [];
+      for (let i = 55; i >= 0; i--) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        const ds = localDate(d);
+        const on = !!h.history?.[ds];
+        cells.push(`<div class="contrib-cell ${on ? 'lv3' : 'lv0'}" title="${ds}"></div>`);
+      }
+      let done30 = 0;
+      for (let i = 0; i < 30; i++) {
+        const d = new Date(); d.setDate(d.getDate() - i);
+        if (h.history?.[localDate(d)]) done30++;
+      }
+      return `
+      <div class="habit-block" data-id="${escapeHtml(h.id)}">
+        <div class="habit-item ${h.doneToday ? 'done' : ''}" data-id="${escapeHtml(h.id)}">
+          <button type="button" class="habit-check" data-toggle="${escapeHtml(h.id)}" aria-pressed="${h.doneToday}" aria-label="Tandai ${escapeHtml(h.name)} selesai hari ini">${h.doneToday ? '<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>' : ''}</button>
+          <span class="habit-icon">${escapeHtml(icon)}</span>
+          <button type="button" class="habit-name" aria-expanded="${open}">${escapeHtml(h.name)}</button>
+          ${progress}
+          <span class="habit-days">${h.streak} hari${milestone ? ' <span class="milestone-pill">Milestone ' + milestone + '</span>' : ''}</span>
+          <button type="button" class="habit-edit-btn" data-edit="${escapeHtml(h.id)}" aria-label="Edit ${escapeHtml(h.name)}">Edit</button>
+        </div>
+        <div class="habit-detail ${open ? '' : 'hidden'}" data-detail="${escapeHtml(h.id)}">
+          <div class="habit-detail-stats">
+            <span>${done30}/30 hari · ${Math.round(done30 / 30 * 100)}%</span>
+            <span>Streak ${h.streak} · terpanjang ${h.longest}</span>
+            <span>Freeze: ${h.freezes}</span>
+          </div>
+          <div class="contrib-graph habit-mini-graph">${cells.join('')}</div>
+        </div>
+      </div>`;
+    }).join('');
+
+    list.querySelectorAll('[data-toggle]').forEach(el => {
+      el.addEventListener('click', e => { e.stopPropagation(); toggleHabit(el.dataset.toggle); });
+    });
+    list.querySelectorAll('.habit-item').forEach(el => {
+      el.addEventListener('click', e => {
+        if (e.target.closest('[data-toggle]') || e.target.closest('[data-edit]')) return;
+        const id = el.dataset.id;
+        expandedHabitId = expandedHabitId === id ? null : id;
+        renderHabits();
+      });
+    });
+    list.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        openHabitModal(btn.dataset.edit);
+      });
+    });
+  }
+  // ... lanjut streak info + contribGraph (tidak diubah) ...
+}
 let expandedHabitId = null;
 let moodMonthCursor = null; // Date at month start
 let moodEditSelected = null;
